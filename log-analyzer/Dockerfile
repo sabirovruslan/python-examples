@@ -9,3 +9,7 @@ ADD requirements.txt .
 # install requirements
 RUN pip install --upgrade pip
 RUN pip install -r requirements.txt
+
+ADD . .
+
+CMD ["python3", "log_analyzer.py"]

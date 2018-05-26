@@ -1,0 +1,16 @@
+version: '3'
+
+services:
+
+  log-analyzer:
+    container_name: log-analyzer
+    build: ./log-analyzer
+    command: python3 log_analyzer.py
+    volumes:
+      - ./log-analyzer/:/usr/src
+    networks:
+      - default
+
+networks:
+  default:
+    driver: bridge
