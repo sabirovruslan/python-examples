@@ -5,7 +5,7 @@ services:
   log-analyzer:
     container_name: log-analyzer
     build: ./log-analyzer
-    command: python3 log_analyzer.py
+    command: python3 log_analyzer.py --config ./config.cfg
     volumes:
       - ./log-analyzer/:/usr/src
     networks:
