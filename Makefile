@@ -1,4 +1,4 @@
-PROJECT_NAME := log-analyzer
+PROJECT_NAME := otus-log-analyzer
 
 build:
 	docker build -t $(PROJECT_NAME) .
