@@ -16,4 +16,5 @@ __pycache__
 # New artifacts
 *~
 .vscode
+.eggs
 
