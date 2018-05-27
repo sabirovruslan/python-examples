@@ -1,9 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from core.analyzer import Analyzer
+from core.log_analyzers import NginxLogAnalyzer
 from core.args import Args
 from core.config import Config
+
 
 config_default = {
     "REPORT_SIZE": 1000,
@@ -11,11 +12,12 @@ config_default = {
     "LOG_DIR": "./log"
 }
 
+
 def main():
     config = __init_config()
-    analyzer = Analyzer(config)
-    analyzer.run()
-    print(analyzer.get_info())
+    nginx_log = NginxLogAnalyzer(config=config)
+    nginx_log.analyze()
+    print(nginx_log.get_info())
 
 
 def __init_config() -> Config:
