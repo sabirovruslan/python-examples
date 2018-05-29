@@ -2,4 +2,4 @@ import re
 
 
 def reg_date(value):
-    return re.match(r'^.*-(\d+)\.?\w*$', value)[0]
+    return str(re.search('\d{4}\d{2}\d{2}', value).group())

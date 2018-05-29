@@ -17,7 +17,6 @@ def main():
     config = __init_config()
     nginx_log = NginxLogAnalyzer(config=config)
     nginx_log.analyze()
-    print(nginx_log.get_info())
 
 
 def __init_config() -> Config:
