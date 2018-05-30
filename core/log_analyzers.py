@@ -37,7 +37,7 @@ class NginxLogAnalyzer(LogAnalyzer):
     def analyze(self):
         self._parser_dir.run()
         self._log_file = LogFile(self._parser_dir.get_last_path_by_date())
-        self._report.init_template(self.extract_date_from_log_file())
+        self._report.init_template(self.parse_date_from_log_file())
 
         if self._report.is_exist():
             print('Лог уже проанализирован {}'.format(self._report.get_path()))
@@ -59,7 +59,7 @@ class NginxLogAnalyzer(LogAnalyzer):
         else:
             print('Данные журнала пусты или имеют неверные данные')
 
-    def extract_date_from_log_file(self):
+    def parse_date_from_log_file(self):
         match = reg_date(self._log_file.get_path())
         return '{}.{}.{}'.format(match[:4], match[4:6], match[6:])
 
@@ -85,8 +85,20 @@ class NginxLogAnalyzer(LogAnalyzer):
                 'count_perc': round(count / one_count_percent, 3),
                 'time_sum': round(time_sum, 3),
                 'time_perc': round(time_sum / one_time_percent, 3),
+                'time_avg': round(time_sum / count, 3),
                 'time_max': max(times),
+                'time_med': round(self.median(times), 3),
             })
         report_data.sort(key=lambda item: (item['time_perc'], item['time_sum']), reverse=True)
 
         return report_data[:self._config.get('REPORT_SIZE')]
+
+    @staticmethod
+    def median(data):
+        data = sorted(data)
+        n = len(data)
+        if n == 0:
+            return 0
+        elif n % 2 == 1:
+            return data[n // 2]
+        return (data[(n + 1) // 2] + data[n // 2]) / 2
