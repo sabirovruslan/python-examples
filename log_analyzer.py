@@ -5,7 +5,6 @@ from core.log_analyzers import NginxLogAnalyzer
 from core.args import Args
 from core.config import Config
 
-
 config_default = {
     "REPORT_SIZE": 1000,
     "REPORT_DIR": "./reports",
