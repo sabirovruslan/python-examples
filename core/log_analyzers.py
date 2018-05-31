@@ -1,4 +1,5 @@
 import collections
+import logging
 import re
 from abc import ABCMeta
 
@@ -17,7 +18,6 @@ class LogAnalyzer:
 
 
 class NginxLogAnalyzer(LogAnalyzer):
-
     pattern = re.compile(
         (
             r''
@@ -28,39 +28,59 @@ class NginxLogAnalyzer(LogAnalyzer):
         )
     )
 
-    def __init__(self, config:Config, report:ReportAbstract=None):
-        self._config = config
-        self._parser_dir = ParserDir(self._config.get('LOG_DIR'))
-        self._report = report or HtmlReport(self._config.get('REPORT_DIR'))
-        self._log_file = None
+    def __init__(self, config: Config, report: ReportAbstract = None):
+        self.__config = config
+        self.__parser_dir = ParserDir(self.__config.get('LOG_DIR'))
+        self.__report = report or HtmlReport(self.__config.get('REPORT_DIR'))
+        self.__logging = self.__init_logging()
+        self.__log_file = None
+
+    def __init_logging(self):
+        logging.basicConfig(
+            filename=self.__config.get('LOGGING_DIR'),
+            level=logging.INFO,
+            format='[%(asctime)s] %(levelname).1s %(message)s'
+        )
+        logger = logging.getLogger('log_analyzers')
+        return logger
 
     def analyze(self):
-        self._parser_dir.run()
-        self._log_file = LogFile(self._parser_dir.get_last_path_by_date())
-        self._report.init_template(self.parse_date_from_log_file())
+        try:
+            self.__parser_dir.run()
+            self.__log_file = LogFile(self.__parser_dir.get_last_path_by_date())
+            self.__report.init_template(self.parse_date_from_log_file())
+        except Exception as e:
+            self.__logging.exception(e)
+            raise
 
-        if self._report.is_exist():
-            print('Лог уже проанализирован {}'.format(self._report.get_path()))
+        if self.__report.is_exist():
+            self.__logging.info('Лог уже проанализирован {}'.format(self.__report.get_path()))
             return
 
-        print('Старт анализа: {}'.format(self._log_file.get_path()))
+        self.__logging.info('Старт анализа: {}'.format(self.__log_file.get_path()))
         result = collections.defaultdict(list)
-        total_count = total_time = 0
-        for line in self._log_file.read():
-            parsed_line = self.parse_line(line)
-            if parsed_line:
+        total_count = 0
+        total_time = 0
+        error_count = 0
+        for line in self.__log_file.read():
+            try:
+                parsed_line = self.parse_line(line)
+                if not parsed_line:
+                    continue
                 total_count += 1
                 total_time += parsed_line['request_time']
                 result[parsed_line['request_url']].append(parsed_line['request_time'])
-        if total_count > 0 and total_time > 0:
+            except Exception:
+                error_count += 1
+        if not self.is_exceeded_percent_error(total_count, error_count):
             result = self.prepare_data_for_report(result, total_count, total_time)
-            self._report.save(result)
-            print('Анализ завершен: {}'.format(self._report.get_path()))
+            self.__report.save(result)
         else:
-            print('Данные журнала пусты или имеют неверные данные')
+            self.__logging.error('Данные журнала пусты или имеют неверные данные')
+        self.__logging.info('Анализ завершен: {}'.format(self.__report.get_path()))
 
     def parse_date_from_log_file(self):
-        match = reg_date(self._log_file.get_path())
+        match = reg_date(self.__log_file.get_path())
         return '{}.{}.{}'.format(match[:4], match[4:6], match[6:])
 
     def parse_line(self, line):
@@ -91,7 +111,7 @@ class NginxLogAnalyzer(LogAnalyzer):
             })
         report_data.sort(key=lambda item: (item['time_perc'], item['time_sum']), reverse=True)
 
-        return report_data[:self._config.get('REPORT_SIZE')]
+        return report_data[:self.__config.get('REPORT_SIZE')]
 
     @staticmethod
     def median(data):
@@ -102,3 +122,6 @@ class NginxLogAnalyzer(LogAnalyzer):
         elif n % 2 == 1:
             return data[n // 2]
         return (data[(n + 1) // 2] + data[n // 2]) / 2
+
+    def is_exceeded_percent_error(self, total: int, error: int):
+        return round(error * 100 / total) < self.__config.get('PERCENT_ERROR', 0)
