@@ -1,5 +1,6 @@
 import collections
 import logging
+import os
 import re
 from abc import ABCMeta
 
@@ -40,13 +41,26 @@ class NginxLogAnalyzer(LogAnalyzer):
             raise
 
     def __init_logging(self):
+        folder = self.__create_log_folder()
         logging.basicConfig(
-            filename=self.__config.get('LOGGING_DIR'),
+            filename=folder,
             level=logging.INFO,
             format='[%(asctime)s] %(levelname).1s %(message)s'
         )
         logger = logging.getLogger('log_analyzers')
         return logger
+
+    def __create_log_folder(self):
+        if not self.__config.get('LOGGING_DIR'):
+            return False
+        folder = os.path.dirname(self.__config.get('LOGGING_DIR'))
+        if os.path.isdir(folder):
+            return folder
+        try:
+            os.makedirs(folder)
+        except OSError:
+            return False
+        return folder
 
     def analyze(self):
         try:
