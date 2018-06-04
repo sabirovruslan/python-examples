@@ -8,7 +8,7 @@ class ReportAbstract:
 
     def __init__(self, report_dir):
         if not os.path.isdir(report_dir):
-            raise Exception('Дирректория не существует')
+            raise Exception('Дирректория не существует: {}'.format(report_dir))
         self._report_dir = report_dir
         self._path = None
 

@@ -8,7 +8,7 @@ class ParserDir:
 
     def __init__(self, log_dir):
         if not os.path.isdir(log_dir):
-            raise Exception('Дирректория не существует')
+            raise Exception('Дирректория не существует: {}'.format(log_dir))
         self._log_dir = log_dir
         self._files = None
 

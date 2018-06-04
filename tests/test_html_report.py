@@ -1,9 +1,16 @@
+import os
 from unittest import TestCase
 
 from core.reports import HtmlReport
 
 
 class ReportTest(TestCase):
+
+    def tearDown(self):
+        path = './tests/testdata/reports/report-2017.06.30.html'
+        if not os.path.isfile(path):
+            return
+        os.remove(path)
 
     def test_save_file_exist(self):
         report = HtmlReport('./tests/testdata/reports/')
