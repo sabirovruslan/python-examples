@@ -30,10 +30,14 @@ class NginxLogAnalyzer(LogAnalyzer):
 
     def __init__(self, config: Config, report: ReportAbstract = None):
         self.__config = config
-        self.__parser_dir = ParserDir(self.__config.get('LOG_DIR'))
-        self.__report = report or HtmlReport(self.__config.get('REPORT_DIR'))
         self.__logging = self.__init_logging()
         self.__log_file = None
+        try:
+            self.__parser_dir = ParserDir(self.__config.get('LOG_DIR'))
+            self.__report = report or HtmlReport(self.__config.get('REPORT_DIR'))
+        except Exception as e:
+            self.__logging.exception(e)
+            raise
 
     def __init_logging(self):
         logging.basicConfig(

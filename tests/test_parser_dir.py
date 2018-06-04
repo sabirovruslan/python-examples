@@ -12,6 +12,5 @@ class ParseDirTest(TestCase):
 
 
     def test_scan_wrong_dir(self):
-        parser_dir = ParserDir('./tests/log')
         with self.assertRaises(Exception):
-            parser_dir.run()
+            ParserDir('./tests/log')
