@@ -10,8 +10,8 @@ unit-test: build
 
 .PHONY: log-analyzer
 log-analyzer: build
-	docker run -it --rm ${PROJECT_NAME} python log_analyzer.py
+	docker run -v `pwd`:/usr/src/ -it --rm ${PROJECT_NAME} python log_analyzer.py
 
 .PHONY: log-analyzer-config
 log-analyzer-config: build
-	docker run -it --rm ${PROJECT_NAME} python log_analyzer.py --config ./config.cfg
+	docker run -v `pwd`:/usr/src/ -it --rm ${PROJECT_NAME} python log_analyzer.py --config ./config.cfg
