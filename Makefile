@@ -15,3 +15,11 @@ log-analyzer: build
 .PHONY: log-analyzer-config
 log-analyzer-config: build
 	docker run -v `pwd`:/usr/src/ -it --rm ${PROJECT_NAME} python log_analyzer.py --config ./config.cfg
+
+.PHONY: analyze
+analyze: build
+	docker run -v `pwd`:/usr/src/ -it --rm ${PROJECT_NAME} python log_analyzer_func.py
+
+.PHONY: analyze-config
+analyze-config: build
+	docker run -v `pwd`:/usr/src/ -it --rm ${PROJECT_NAME} python log_analyzer_func.py --config ./config.cfg
