@@ -1,17 +1,13 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import collections
 import gzip
 import json
 import logging
 import os
 import re
 from argparse import ArgumentParser
-from glob import glob
-
-from core.log_analyzers import NginxLogAnalyzer
-from core.args import Args
-from core.config import Config
+from collections import defaultdict, namedtuple
+from datetime import datetime
 
 config_default = {
     "REPORT_SIZE": 1000,
@@ -29,101 +25,104 @@ pattern = re.compile(
     )
 )
 
+FileLog = namedtuple('FileLog', ['path', 'date'])
+
 
 def main():
-    try:
-        init_config(config_default)
-        logger = init_logging(config_default.get('LOGGING_DIR'))
-    except Exception as e:
-        print('Ошибка инициализации параметров: {}'.format(e))
-        raise
-
-    analyze(config_default, logger)
+    args = get_args()
+    init_config(config_default, args.config)
+    init_logging(config_default.get('LOGGING_DIR'))
+    analyze(config_default)
 
 
-def init_config(config):
+def get_args():
     parser = ArgumentParser()
     parser.add_argument('-c', '--config')
-    args = parser.parse_args()
-    if args.config:
+    return parser.parse_args()
+
+
+def init_config(config, filename=None):
+    if filename:
         try:
-            with open(args.config, mode='rb') as config_file:
+            with open(filename, mode='rb') as config_file:
                 (key, val) = config_file.read().decode('utf-8').split('=')
                 config[key.strip()] = val.strip()
-        except IOError as e:
-            e.strerror = 'Не удается загрузить файл конфигурации {}'.format(e.strerror)
-            raise
+        except:
+            raise Exception('Can not load configuration file')
 
 
 def init_logging(filename=None):
     if filename and not os.path.isdir(filename):
-        try:
-            os.makedirs(filename)
-        except OSError:
-            return False
+        os.makedirs(filename)
     logging.basicConfig(
         filename=filename,
         level=logging.INFO,
-        format='[%(asctime)s] %(levelname).1s %(message)s'
+        format='[%(asctime)s] %(levelname).1s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S'
     )
-    return logging.getLogger('log_analyzers')
 
 
-def analyze(config, logger):
+def analyze(config):
     try:
-        log_path = get_last_path_log(config.get('LOG_DIR'))
-        report = os.path.join(
+        file_log = get_last_log(config.get('LOG_DIR'))
+        report_file = os.path.join(
             config.get('REPORT_DIR'),
-            'report-{}.html'.format(parse_date_from_log_file(log_path))
+            'report-{}.html'.format(file_log.date.strftime('%Y.%m.%d'))
         )
     except Exception as e:
-        logger.exception(e)
+        logging.exception(e)
         return
 
-    if os.path.exists(report):
-        logger.info('Лог уже проанализирован {}'.format(report))
+    if os.path.exists(report_file):
+        logging.info('Лог уже проанализирован {}'.format(report_file))
         return
 
-    logger.info('Старт анализа: {}'.format(log_path))
-    result = collections.defaultdict(list)
-    total_count = 0
-    total_time = 0
-    error_count = 0
-    for line in read_file(log_path):
-        try:
-            parsed_line = parse_line(line)
-            if not parsed_line:
-                continue
-            total_count += 1
-            total_time += parsed_line['request_time']
-            result[parsed_line['request_url']].append(parsed_line['request_time'])
-        except Exception:
-            error_count += 1
-    if not round(error_count * 100 / total_count) < config.get('PERCENT_ERROR', 0):
-        result = prepare_data_for_report(result, total_count, total_time)
-        save_report(report, result[:int(config.get('REPORT_SIZE'))])
-    else:
-        logger.error('Данные журнала пусты или имеют неверные данные')
-    logger.info('Анализ завершен: {}'.format(report))
+    logging.info('Старт анализа: {}'.format(file_log.path))
+    report = defaultdict(list)
+    try:
+        for line in read_file(file_log.path, errors_limit=config.get('PERCENT_ERROR', 0)):
+            report[line['request_url']].append(line['request_time'])
+    except Exception as e:
+        logging.exception(e)
+
+    report = prepare_data_for_report(report)
+    save_report(report_file, report[:int(config.get('REPORT_SIZE'))])
+
+    logging.info('Анализ завершен: {}'.format(report_file))
 
 
-def get_last_path_log(log_dir):
+def get_last_log(log_dir):
     if not os.path.isdir(log_dir):
-        raise Exception('Дирректория не существует: {}'.format(log_dir))
-    files = glob(log_dir + '/nginx-access-ui.log-*')
-    return max(files or [], key=lambda filename: reg_date(filename))
+        raise Exception('Directory does not exist: {}'.format(log_dir))
+
+    file_log = None
+    for filename in os.listdir(log_dir):
+        match_result = re.match(r'^nginx-access-ui\.log-(?P<date>\d{8})(\.gz)?$', filename)
+        if not match_result:
+            continue
+        date_value = datetime.strptime(match_result.groupdict()['date'], '%Y%m%d')
+        if not file_log or date_value > file_log.date:
+            file_log = FileLog(os.path.join(log_dir, filename), date_value)
+
+    return file_log
 
 
-def parse_date_from_log_file(filename):
-    match = reg_date(filename)
-    return '{}.{}.{}'.format(match[:4], match[4:6], match[6:])
+def read_file(log_path, errors_limit):
+    func = gzip.open if log_path.endswith(".gz") else open
+    parse_lines = 0
+    errors = 0
+    with func(log_path, 'rb') as file:
+        for line in file:
+            line = line.decode('utf-8')
+            report_line = parse_line(line)
+            if not report_line:
+                errors += 1
+                continue
+            parse_lines += 1
+            yield report_line
 
-
-def read_file(log_path):
-    file = gzip.open(log_path, 'rb') if log_path.endswith(".gz") else open(log_path)
-    for line in file:
-        yield line.decode('utf-8') if isinstance(line, bytes) else line
-    file.close()
+    if round(errors * 100 / parse_lines) > errors_limit:
+        raise Exception('The log data is empty or has incorrect data')
 
 
 def parse_line(line):
@@ -135,8 +134,10 @@ def parse_line(line):
     return parsed_line
 
 
-def prepare_data_for_report(data, total_count, total_time):
+def prepare_data_for_report(data):
     report_data = []
+    total_count = len(data.keys())
+    total_time = sum([sum(times) for times in data.values()])
     one_count_percent = float(total_count / 100)
     one_time_percent = float(total_time / 100)
 
@@ -174,10 +175,6 @@ def save_report(filename, data):
     file_data = file_data.replace('$table_json', json.dumps(data))
     with open(filename, 'w') as f:
         f.write(file_data)
-
-
-def reg_date(value):
-    return str(re.search('\d{4}\d{2}\d{2}', value).group())
 
 
 if __name__ == "__main__":
