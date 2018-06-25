@@ -36,36 +36,54 @@ GENDERS = {
 }
 
 
-class CharField:
-    pass
+class Field:
+    __metaclass__ = abc.ABCMeta
+
+    def __init__(self, **kwargs):
+        self.required = kwargs.get('required')
+        self.nullable = kwargs.get('nullable')
+
+    def validate(self):
+        raise NotImplementedError
 
 
-class ArgumentsField:
-    pass
+class CharField(Field):
+    def validate(self):
+        pass
+
+
+class ArgumentsField(Field):
+    def validate(self):
+        pass
 
 
 class EmailField(CharField):
     pass
 
 
-class PhoneField:
-    pass
+class PhoneField(Field):
+    def validate(self):
+        pass
 
 
-class DateField:
-    pass
+class DateField(Field):
+    def validate(self):
+        pass
 
 
-class BirthDayField:
-    pass
+class BirthDayField(Field):
+    def validate(self):
+        pass
 
 
-class GenderField:
-    pass
+class GenderField(Field):
+    def validate(self):
+        pass
 
 
-class ClientIDsField:
-    pass
+class ClientIDsField(Field):
+    def validate(self):
+        pass
 
 
 class ClientsInterestsRequest:

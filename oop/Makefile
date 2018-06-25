@@ -6,7 +6,7 @@ build:
 
 .PHONY: unit-test
 unit-test: build
-	docker run -it --rm ${PROJECT_NAME} python setup.py test
+	docker run -it --rm ${PROJECT_NAME} python test.py
 
 .PHONY: oop
 oop: build
