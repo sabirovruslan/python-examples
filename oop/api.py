@@ -6,9 +6,12 @@ import json
 import datetime
 import logging
 import hashlib
+import re
 import uuid
 from optparse import OptionParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
+
+string_types = (str,)
 
 SALT = 'Otus'
 ADMIN_LOGIN = 'admin'
@@ -43,48 +46,75 @@ class Field:
         self.required = kwargs.get('required')
         self.nullable = kwargs.get('nullable')
 
-    def validate(self):
+    def validate(self, value):
         raise NotImplementedError
 
 
 class CharField(Field):
-    def validate(self):
-        pass
+    def validate(self, value):
+        if not isinstance(value, string_types):
+            raise Exception('Field must be a string')
 
 
 class ArgumentsField(Field):
-    def validate(self):
-        pass
+    def validate(self, value):
+        if not isinstance(value, dict):
+            raise Exception('Field must be a dict')
 
 
 class EmailField(CharField):
-    pass
+    __re = re.compile(r'^.+@([^.@][^@]+)$', re.IGNORECASE)
+
+    def validate(self, value):
+        match = self.__re.match(value or '')
+        if not match:
+            raise Exception('Not valid email')
 
 
 class PhoneField(Field):
-    def validate(self):
-        pass
+    __re = re.compile(r'(^7[\d]{10}$)')
+
+    def validate(self, value):
+        match = self.__re.match(value or '')
+        if not match:
+            raise Exception('Not valid phone')
 
 
 class DateField(Field):
-    def validate(self):
-        pass
+
+    def __init__(self, **kwargs):
+        super(DateField, self).__init__(**kwargs)
+        self.format = kwargs.get('format', '%d.%m.%Y')
+
+    def validate(self, value):
+        try:
+            datetime.datetime.strptime(value, self.format)
+        except ValueError:
+            raise Exception('Field must be a date')
 
 
-class BirthDayField(Field):
-    def validate(self):
-        pass
+class BirthDayField(DateField):
+    MAX_AGE = 70
+
+    def validate(self, value):
+        super(BirthDayField, self).validate(value)
+        birthday = datetime.datetime.strptime(value, self.format)
+        if datetime.datetime.now().year - birthday.year > self.MAX_AGE:
+            raise Exception('Field must be less than 70 ages')
 
 
 class GenderField(Field):
-    def validate(self):
-        pass
+    def validate(self, value):
+        if value not in GENDERS:
+            raise Exception('Field must be values in list [0, 1, 2]')
 
 
 class ClientIDsField(Field):
-    def validate(self):
-        pass
-
+    def validate(self, value):
+        if not isinstance(value, list):
+            raise Exception('Field must be a list')
+        if not all([isinstance(id, int) for id in value]):
+            raise Exception('List values must be int')
 
 class ClientsInterestsRequest:
     client_ids = ClientIDsField(required=True)
