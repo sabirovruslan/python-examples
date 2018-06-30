@@ -11,7 +11,7 @@ import uuid
 from optparse import OptionParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
-string_types = (str,)
+import scoring
 
 SALT = 'Otus'
 ADMIN_LOGIN = 'admin'
@@ -46,14 +46,22 @@ class Field:
         self.required = kwargs.get('required')
         self.nullable = kwargs.get('nullable')
 
+    def parse(self, value):
+        self.validate(value)
+        return value
+
     def validate(self, value):
         raise NotImplementedError
 
 
 class CharField(Field):
     def validate(self, value):
-        if not isinstance(value, string_types):
+        if not isinstance(value, str):
             raise Exception('Field must be a string')
+
+    def parse(self, value):
+        self.validate(value)
+        return value
 
 
 class ArgumentsField(Field):
@@ -116,12 +124,63 @@ class ClientIDsField(Field):
         if not all([isinstance(id, int) for id in value]):
             raise Exception('List values must be int')
 
-class ClientsInterestsRequest:
+
+class MetaRequest(type):
+    def __new__(mcls, name, bases, attrs):
+        fields = []
+        for name, field in attrs.items():
+            if not isinstance(field, Field):
+                continue
+            field.name = name
+            fields.append(field)
+        cls = super(MetaRequest, mcls).__new__(mcls, name, bases, attrs)
+        cls.fields = fields
+        return cls
+
+
+class Request:
+    __metaclass__ = MetaRequest
+
+    def __init__(self, params):
+        self.params = params
+        self.errors = []
+        self.is_cleaned = False
+
+    def is_valid(self):
+        if self.is_cleaned:
+            self._clean()
+        return not self.errors
+
+    def _clean(self):
+        for field in self.fields:
+            value = None
+            try:
+                value = self.params[field.name]
+            except Exception:
+                self.errors.append(f'Field "{field.name}" not found')
+                continue
+            if not value and value != 0:
+                if field.nullable:
+                    setattr(self, field.name, value)
+                else:
+                    self.errors.append(f'Field "{field.name}" not nullable')
+                continue
+            try:
+                setattr(self, field.name, field.parse(value))
+            except Exception as e:
+                self.errors.append(f'Field "{field.name}" error {e}')
+        self.is_cleaned = True
+
+    def get_error_to_string(self):
+        return ', '.join(self.errors)
+
+
+class ClientsInterestsRequest(Request):
     client_ids = ClientIDsField(required=True)
     date = DateField(required=False, nullable=True)
 
 
-class OnlineScoreRequest:
+class OnlineScoreRequest(Request):
     first_name = CharField(required=False, nullable=True)
     last_name = CharField(required=False, nullable=True)
     email = EmailField(required=False, nullable=True)
@@ -129,8 +188,16 @@ class OnlineScoreRequest:
     birthday = BirthDayField(required=False, nullable=True)
     gender = GenderField(required=False, nullable=True)
 
+    def is_valid(self):
+        if not super(OnlineScoreRequest, self).is_valid():
+            return False
 
-class MethodRequest:
+    def _check_fields(self):
+        return not (self.phone and self.email) and not (self.first_name and self.last_name) \
+               and not bool(self.gender is not None and self.birthday)
+
+
+class MethodRequest(Request):
     account = CharField(required=False, nullable=True)
     login = CharField(required=True, nullable=True)
     token = CharField(required=True, nullable=True)
@@ -140,6 +207,35 @@ class MethodRequest:
     @property
     def is_admin(self):
         return self.login == ADMIN_LOGIN
+
+
+class RequestHandler:
+    def validate_handle(self, request, arguments, ctx):
+        if arguments.is_valid():
+            return arguments.get_error_to_string, INVALID_REQUEST
+        return self.handle(request, arguments, ctx, None)
+
+    def handle(self, request, arguments, ctx, store):
+        return {}, OK
+
+
+class ClientsInterestsHandler(RequestHandler):
+    type = ClientsInterestsRequest
+
+    def handle(self, request, arguments, ctx, store):
+        ctx['nclients'] = len(arguments.client_ids)
+        return {cid: scoring.get_interests(store, cid) for cid in arguments.client_ids}, OK
+
+
+class OnlineScoreHandler(RequestHandler):
+    type = OnlineScoreRequest
+
+    def handle(self, request, arguments, ctx, store):
+        score = 42
+        if not request.is_admin:
+            score = scoring.get_score(store, **arguments)
+        ctx['has'] = [field.name for field in self.type.fields if getattr(arguments, field.name)]
+        return {'score': score}, OK
 
 
 def check_auth(request):
@@ -153,8 +249,19 @@ def check_auth(request):
 
 
 def method_handler(request, ctx, store):
-    response, code = None, None
-    return response, code
+    handlers = {
+        'clients_interests': lambda: ClientsInterestsHandler(),
+        'online_score': lambda: OnlineScoreHandler()
+    }
+    method_request = MethodRequest(request['body'])
+    if not method_request.is_valid():
+        return method_request.get_error_to_string(), INVALID_REQUEST
+    if not check_auth(method_request):
+        return None, FORBIDDEN
+    handler = handlers.get(method_request.method)
+    if not handler:
+        return "Method not found", NOT_FOUND
+    return handler.validate_handle(method_request, handler.type(method_request.arguments), ctx, store)
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
@@ -199,6 +306,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
         logging.info(context)
         self.wfile.write(json.dumps(r))
         return
+
 
 if __name__ == '__main__':
     op = OptionParser()
