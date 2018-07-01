@@ -59,10 +59,6 @@ class CharField(Field):
         if not isinstance(value, str):
             raise Exception('Field must be a string')
 
-    def parse(self, value):
-        self.validate(value)
-        return value
-
 
 class ArgumentsField(Field):
     def validate(self, value):
@@ -147,11 +143,11 @@ class Request:
         self.is_cleaned = False
 
     def is_valid(self):
-        if self.is_cleaned:
-            self._clean()
+        if not self.is_cleaned:
+            self.clean()
         return not self.errors
 
-    def _clean(self):
+    def clean(self):
         for field in self.fields:
             value = None
             try:
