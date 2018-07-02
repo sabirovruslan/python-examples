@@ -53,7 +53,6 @@ class Field:
     def validate(self, value):
         raise NotImplementedError
 
-
 class CharField(Field):
     def validate(self, value):
         if not isinstance(value, str):
@@ -79,7 +78,7 @@ class PhoneField(Field):
     __re = re.compile(r'(^7[\d]{10}$)')
 
     def validate(self, value):
-        match = self.__re.match(value or '')
+        match = self.__re.match(str(value) or '')
         if not match:
             raise Exception('Not valid phone')
 
@@ -112,6 +111,10 @@ class GenderField(Field):
         if value not in GENDERS:
             raise Exception('Field must be values in list [0, 1, 2]')
 
+    def parse(self, value):
+        self.validate(value)
+        return str(value)
+
 
 class ClientIDsField(Field):
     def validate(self, value):
@@ -134,8 +137,7 @@ class MetaRequest(type):
         return cls
 
 
-class Request:
-    __metaclass__ = MetaRequest
+class Request(metaclass=MetaRequest):
 
     def __init__(self, params):
         self.params = params
@@ -153,8 +155,9 @@ class Request:
             try:
                 value = self.params[field.name]
             except Exception:
-                self.errors.append(f'Field "{field.name}" not found')
-                continue
+                if field.required:
+                    self.errors.append(f'Field "{field.name}" not found')
+                    continue
             if not value and value != 0:
                 if field.nullable:
                     setattr(self, field.name, value)
@@ -185,12 +188,14 @@ class OnlineScoreRequest(Request):
     gender = GenderField(required=False, nullable=True)
 
     def is_valid(self):
-        if not super(OnlineScoreRequest, self).is_valid():
+        is_valid = super(OnlineScoreRequest, self).is_valid()
+        if not is_valid:
             return False
-
-    def _check_fields(self):
-        return not (self.phone and self.email) and not (self.first_name and self.last_name) \
-               and not bool(self.gender is not None and self.birthday)
+        if not (self.phone and self.email) and not (self.first_name and self.last_name) \
+               and not bool(self.gender is not None and self.birthday):
+            self.errors.append('Invalid params')
+            return False
+        return True
 
 
 class MethodRequest(Request):
@@ -207,8 +212,8 @@ class MethodRequest(Request):
 
 class RequestHandler:
     def validate_handle(self, request, arguments, ctx):
-        if arguments.is_valid():
-            return arguments.get_error_to_string, INVALID_REQUEST
+        if not arguments.is_valid():
+            return arguments.get_error_to_string(), INVALID_REQUEST
         return self.handle(request, arguments, ctx, None)
 
     def handle(self, request, arguments, ctx, store):
@@ -229,16 +234,21 @@ class OnlineScoreHandler(RequestHandler):
     def handle(self, request, arguments, ctx, store):
         score = 42
         if not request.is_admin:
-            score = scoring.get_score(store, **arguments)
+            score = scoring.get_score(
+                store, arguments.phone, arguments.email, arguments.birthday, arguments.gender,
+                arguments.first_name, arguments.last_name
+            )
         ctx['has'] = [field.name for field in self.type.fields if getattr(arguments, field.name)]
         return {'score': score}, OK
 
 
 def check_auth(request):
     if request.is_admin:
-        digest = hashlib.sha512(datetime.datetime.now().strftime('%Y%m%d%H') + ADMIN_SALT).hexdigest()
+        msg = (datetime.datetime.now().strftime('%Y%m%d%H') + ADMIN_SALT).encode('utf-8')
+        digest = hashlib.sha512(msg).hexdigest()
     else:
-        digest = hashlib.sha512(request.account + request.login + SALT).hexdigest()
+        msg = (request.account + request.login + SALT).encode('utf-8')
+        digest = hashlib.sha512(msg).hexdigest()
     if digest == request.token:
         return True
     return False
@@ -246,8 +256,8 @@ def check_auth(request):
 
 def method_handler(request, ctx, store):
     handlers = {
-        'clients_interests': lambda: ClientsInterestsHandler(),
-        'online_score': lambda: OnlineScoreHandler()
+        'clients_interests': ClientsInterestsHandler,
+        'online_score': OnlineScoreHandler
     }
     method_request = MethodRequest(request['body'])
     if not method_request.is_valid():
@@ -257,7 +267,7 @@ def method_handler(request, ctx, store):
     handler = handlers.get(method_request.method)
     if not handler:
         return "Method not found", NOT_FOUND
-    return handler.validate_handle(method_request, handler.type(method_request.arguments), ctx, store)
+    return handler().validate_handle(method_request, handler.type(method_request.arguments), ctx)
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
