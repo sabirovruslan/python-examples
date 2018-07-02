@@ -39,6 +39,10 @@ GENDERS = {
 }
 
 
+class ValidateFieldError(Exception):
+    pass
+
+
 class Field:
     __metaclass__ = abc.ABCMeta
 
@@ -53,16 +57,17 @@ class Field:
     def validate(self, value):
         raise NotImplementedError
 
+
 class CharField(Field):
     def validate(self, value):
         if not isinstance(value, str):
-            raise Exception('Field must be a string')
+            raise ValidateFieldError('Field must be a string')
 
 
 class ArgumentsField(Field):
     def validate(self, value):
         if not isinstance(value, dict):
-            raise Exception('Field must be a dict')
+            raise ValidateFieldError('Field must be a dict')
 
 
 class EmailField(CharField):
@@ -71,7 +76,7 @@ class EmailField(CharField):
     def validate(self, value):
         match = self.__re.match(value or '')
         if not match:
-            raise Exception('Not valid email')
+            raise ValidateFieldError('Not valid email')
 
 
 class PhoneField(Field):
@@ -80,36 +85,36 @@ class PhoneField(Field):
     def validate(self, value):
         match = self.__re.match(str(value) or '')
         if not match:
-            raise Exception('Not valid phone')
+            raise ValidateFieldError('Not valid phone')
 
 
 class DateField(Field):
 
     def __init__(self, **kwargs):
-        super(DateField, self).__init__(**kwargs)
+        super().__init__(**kwargs)
         self.format = kwargs.get('format', '%d.%m.%Y')
 
     def validate(self, value):
         try:
             datetime.datetime.strptime(value, self.format)
-        except ValueError:
-            raise Exception('Field must be a date')
+        except Exception:
+            raise ValidateFieldError('Field must be a date')
 
 
 class BirthDayField(DateField):
     MAX_AGE = 70
 
     def validate(self, value):
-        super(BirthDayField, self).validate(value)
+        super().validate(value)
         birthday = datetime.datetime.strptime(value, self.format)
         if datetime.datetime.now().year - birthday.year > self.MAX_AGE:
-            raise Exception('Field must be less than 70 ages')
+            raise ValidateFieldError('Field must be less than 70 ages')
 
 
 class GenderField(Field):
     def validate(self, value):
         if value not in GENDERS:
-            raise Exception('Field must be values in list [0, 1, 2]')
+            raise ValidateFieldError('Field must be values in list [0, 1, 2]')
 
     def parse(self, value):
         self.validate(value)
@@ -119,9 +124,9 @@ class GenderField(Field):
 class ClientIDsField(Field):
     def validate(self, value):
         if not isinstance(value, list):
-            raise Exception('Field must be a list')
+            raise ValidateFieldError('Field must be a list')
         if not all([isinstance(id, int) for id in value]):
-            raise Exception('List values must be int')
+            raise ValidateFieldError('List values must be int')
 
 
 class MetaRequest(type):
@@ -142,14 +147,14 @@ class Request(metaclass=MetaRequest):
     def __init__(self, params):
         self.params = params
         self.errors = []
-        self.is_cleaned = False
+        self.is_process = False
 
     def is_valid(self):
-        if not self.is_cleaned:
-            self.clean()
+        if not self.is_process:
+            self._process()
         return not self.errors
 
-    def clean(self):
+    def _process(self):
         for field in self.fields:
             value = None
             try:
@@ -168,7 +173,7 @@ class Request(metaclass=MetaRequest):
                 setattr(self, field.name, field.parse(value))
             except Exception as e:
                 self.errors.append(f'Field "{field.name}" error {e}')
-        self.is_cleaned = True
+        self.is_process = True
 
     def get_error_to_string(self):
         return ', '.join(self.errors)
@@ -188,14 +193,16 @@ class OnlineScoreRequest(Request):
     gender = GenderField(required=False, nullable=True)
 
     def is_valid(self):
-        is_valid = super(OnlineScoreRequest, self).is_valid()
-        if not is_valid:
+        if not super().is_valid():
             return False
-        if not (self.phone and self.email) and not (self.first_name and self.last_name) \
-               and not bool(self.gender is not None and self.birthday):
+        if self._is_not_check_fields():
             self.errors.append('Invalid params')
             return False
         return True
+
+    def _is_not_check_fields(self):
+        return not (self.phone and self.email) and not (self.first_name and self.last_name) \
+               and not bool(self.gender is not None and self.birthday)
 
 
 class MethodRequest(Request):
@@ -211,7 +218,7 @@ class MethodRequest(Request):
 
 
 class RequestHandler:
-    def validate_handle(self, request, arguments, ctx):
+    def execute(self, request, arguments, ctx):
         if not arguments.is_valid():
             return arguments.get_error_to_string(), INVALID_REQUEST
         return self.handle(request, arguments, ctx, None)
@@ -229,10 +236,12 @@ class ClientsInterestsHandler(RequestHandler):
 
 
 class OnlineScoreHandler(RequestHandler):
+    ADMIN_SCORE = 42
+
     type = OnlineScoreRequest
 
     def handle(self, request, arguments, ctx, store):
-        score = 42
+        score = self.ADMIN_SCORE
         if not request.is_admin:
             score = scoring.get_score(
                 store, arguments.phone, arguments.email, arguments.birthday, arguments.gender,
@@ -254,20 +263,28 @@ def check_auth(request):
     return False
 
 
-def method_handler(request, ctx, store):
-    handlers = {
-        'clients_interests': ClientsInterestsHandler,
-        'online_score': OnlineScoreHandler
+class FactoryHandlers(abc.ABC):
+    __configs = {
+        'clients_interests': lambda: ClientsInterestsHandler(),
+        'online_score': lambda: OnlineScoreHandler()
     }
+
+    @staticmethod
+    def create(code):
+        func = FactoryHandlers.__configs.get(code)
+        return func() if func else False
+
+
+def method_handler(request, ctx, store):
     method_request = MethodRequest(request['body'])
     if not method_request.is_valid():
         return method_request.get_error_to_string(), INVALID_REQUEST
     if not check_auth(method_request):
         return None, FORBIDDEN
-    handler = handlers.get(method_request.method)
+    handler = FactoryHandlers.create(method_request.method)
     if not handler:
         return "Method not found", NOT_FOUND
-    return handler().validate_handle(method_request, handler.type(method_request.arguments), ctx)
+    return handler.execute(method_request, handler.type(method_request.arguments), ctx)
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
