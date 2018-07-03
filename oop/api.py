@@ -263,28 +263,20 @@ def check_auth(request):
     return False
 
 
-class FactoryHandlers(abc.ABC):
-    __configs = {
-        'clients_interests': lambda: ClientsInterestsHandler(),
-        'online_score': lambda: OnlineScoreHandler()
-    }
-
-    @staticmethod
-    def create(code):
-        func = FactoryHandlers.__configs.get(code)
-        return func() if func else False
-
-
 def method_handler(request, ctx, store):
+    config_handlers = {
+        'clients_interests': ClientsInterestsHandler,
+        'online_score': OnlineScoreHandler
+    }
     method_request = MethodRequest(request['body'])
     if not method_request.is_valid():
         return method_request.get_error_to_string(), INVALID_REQUEST
     if not check_auth(method_request):
         return None, FORBIDDEN
-    handler = FactoryHandlers.create(method_request.method)
+    handler = config_handlers.get(method_request.method)
     if not handler:
         return "Method not found", NOT_FOUND
-    return handler.execute(method_request, handler.type(method_request.arguments), ctx)
+    return handler().execute(method_request, handler.type(method_request.arguments), ctx)
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
