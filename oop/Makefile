@@ -11,3 +11,7 @@ unit-test: build
 .PHONY: oop
 oop: build
 	docker run -v `pwd`:/usr/src/ -it --rm ${PROJECT_NAME} python api.py
+
+.PHONY: test
+test: build
+	docker run -it --rm ${PROJECT_NAME} python setup.py test
