@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from api import CharField, ValidateFieldError, Request, ArgumentsField, EmailField
+from api import CharField, ValidateFieldError, ArgumentsField, EmailField, PhoneField
 from tests.utils import cases
 
 
@@ -42,5 +42,19 @@ class EmailFieldTest(TestCase):
     @cases(['test.@.test.ru', '@test@.test.ru', 'test.test.ru', 'test@.ru'])
     def test_invalid(self, value):
         field = EmailField()
+        with self.assertRaises(ValidateFieldError):
+            field.parse(value)
+
+
+class PhoneFieldTest(TestCase):
+
+    @cases(['79000000000', 79000000001, 78000000000])
+    def test_valid(self, value):
+        field = PhoneField()
+        self.assertEqual(field.parse(value), value)
+
+    @cases(['7900000000', '89000000000', '+79000000000', 7800000000012])
+    def test_invalid(self, value):
+        field = PhoneField()
         with self.assertRaises(ValidateFieldError):
             field.parse(value)
