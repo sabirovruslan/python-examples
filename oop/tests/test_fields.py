@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from api import CharField, ValidateFieldError, ArgumentsField, EmailField, PhoneField, DateField
+from api import CharField, ValidateFieldError, ArgumentsField, EmailField, PhoneField, DateField, BirthDayField
 from tests.utils import cases
 
 
@@ -70,5 +70,19 @@ class DateFieldTest(TestCase):
     @cases(['12.15.2017', '', '312.01.2017', 'OO.OO.OOOO'])
     def test_invalid(self, value):
         field = DateField()
+        with self.assertRaises(ValidateFieldError):
+            field.parse(value)
+
+
+class BirthDayFieldTest(TestCase):
+
+    @cases(['12.01.2017', '12.01.1948', '12.01.1990'])
+    def test_valid(self, value):
+        field = BirthDayField()
+        self.assertEqual(field.parse(value), value)
+
+    @cases(['12.01.1900', '', '312.01.2017', 'OO.OO.OOOO'])
+    def test_invalid(self, value):
+        field = BirthDayField()
         with self.assertRaises(ValidateFieldError):
             field.parse(value)
