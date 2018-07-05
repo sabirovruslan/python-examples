@@ -1,6 +1,6 @@
 import unittest
 
-from tests.test_fields import CharFieldTest, ArgumentsFieldTest, EmailFieldTest, PhoneFieldTest
+from tests.test_fields import CharFieldTest, ArgumentsFieldTest, EmailFieldTest, PhoneFieldTest, DateFieldTest
 
 
 def suite():
@@ -9,6 +9,7 @@ def suite():
     test_suite.addTest(unittest.makeSuite(ArgumentsFieldTest))
     test_suite.addTest(unittest.makeSuite(EmailFieldTest))
     test_suite.addTest(unittest.makeSuite(PhoneFieldTest))
+    test_suite.addTest(unittest.makeSuite(DateFieldTest))
     return test_suite
 
 

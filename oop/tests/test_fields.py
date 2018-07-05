@@ -1,6 +1,6 @@
 from unittest import TestCase
 
-from api import CharField, ValidateFieldError, ArgumentsField, EmailField, PhoneField
+from api import CharField, ValidateFieldError, ArgumentsField, EmailField, PhoneField, DateField
 from tests.utils import cases
 
 
@@ -53,8 +53,22 @@ class PhoneFieldTest(TestCase):
         field = PhoneField()
         self.assertEqual(field.parse(value), value)
 
-    @cases(['7900000000', '89000000000', '+79000000000', 7800000000012])
+    @cases(['7900000000', '89000000001', '+79000000000', 7800000000012, '790000000oO'])
     def test_invalid(self, value):
         field = PhoneField()
+        with self.assertRaises(ValidateFieldError):
+            field.parse(value)
+
+
+class DateFieldTest(TestCase):
+
+    @cases(['12.01.2017', '12.01.2000', '12.01.1900'])
+    def test_valid(self, value):
+        field = DateField()
+        self.assertEqual(field.parse(value), value)
+
+    @cases(['12.15.2017', '', '312.01.2017', 'OO.OO.OOOO'])
+    def test_invalid(self, value):
+        field = DateField()
         with self.assertRaises(ValidateFieldError):
             field.parse(value)
