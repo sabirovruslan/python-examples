@@ -1,11 +1,12 @@
 import unittest
 
-from tests.test_fields import CharFieldTest
+from tests.test_fields import CharFieldTest, ArgumentsFieldTest
 
 
 def suite():
     test_suite = unittest.TestSuite()
     test_suite.addTest(unittest.makeSuite(CharFieldTest))
+    test_suite.addTest(unittest.makeSuite(ArgumentsFieldTest))
     return test_suite
 
 
