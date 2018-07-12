@@ -325,7 +325,7 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
             r = {'error': response or ERRORS.get(code, 'Unknown Error'), 'code': code}
         context.update(r)
         logging.info(context)
-        self.wfile.write(json.dumps(r))
+        self.wfile.write(json.dumps(r).encode('utf-8'))
         return
 
 
