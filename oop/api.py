@@ -6,12 +6,14 @@ import json
 import datetime
 import logging
 import hashlib
+import os
 import re
 import uuid
 from optparse import OptionParser
 from http.server import HTTPServer, BaseHTTPRequestHandler
 
 import scoring
+from store import Store, MemcacheAdapter
 
 SALT = 'Otus'
 ADMIN_LOGIN = 'admin'
@@ -283,7 +285,11 @@ class MainHTTPHandler(BaseHTTPRequestHandler):
     router = {
         'method': method_handler
     }
-    store = None
+    store = Store(MemcacheAdapter(
+            address=os.environ['STORE_PORT_11211_TCP_ADDR'],
+            port=os.environ['STORE_PORT_11211_TCP_PORT']
+        )
+    )
 
     def get_request_id(self, headers):
         return headers.get('HTTP_X_REQUEST_ID', uuid.uuid4().hex)
