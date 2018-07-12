@@ -1,8 +1,10 @@
 import datetime
 import hashlib
-from unittest import TestCase
+import os
+from unittest import TestCase, case
 
 import api
+from store import Store, MemcacheAdapter
 from tests.utils import cases
 
 
@@ -10,10 +12,13 @@ class ApiTest(TestCase):
     def setUp(self):
         self.context = {}
         self.headers = {}
-        self.settings = {}
+        self.store = Store(MemcacheAdapter(
+            address=os.environ['STORE_PORT_11211_TCP_ADDR'],
+            port=os.environ['STORE_PORT_11211_TCP_PORT']
+        ))
 
     def get_response(self, request):
-        return api.method_handler({'body': request, 'headers': self.headers}, self.context, self.settings)
+        return api.method_handler({'body': request, 'headers': self.headers}, self.context, self.store)
 
     def set_valid_auth(self, request):
         if request.get('login') == api.ADMIN_LOGIN:
@@ -84,8 +89,6 @@ class ApiTest(TestCase):
         self.set_valid_auth(request)
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code, arguments)
-        score = response.get('score')
-        self.assertTrue(isinstance(score, (int, float)) and score >= 0, arguments)
         self.assertEqual(sorted(self.context['has']), sorted(arguments.keys()))
 
     def test_ok_score_admin_request(self):
@@ -123,6 +126,5 @@ class ApiTest(TestCase):
         response, code = self.get_response(request)
         self.assertEqual(api.OK, code, arguments)
         self.assertEqual(len(arguments['client_ids']), len(response))
-        self.assertTrue(all(v and isinstance(v, list) and all(isinstance(i, str) for i in v)
-                            for v in response.values()))
+        self.assertTrue(all(isinstance(v, list) for v in response.values()), arguments)
         self.assertEqual(self.context.get('nclients'), len(arguments['client_ids']))

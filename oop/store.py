@@ -14,7 +14,7 @@ class CacheAdapter:
 
 
 class MemcacheAdapter(CacheAdapter):
-    DEFAULT_TIMEOUT = 3
+    DEFAULT_TIMEOUT = 10
 
     def __init__(self, **kwargs):
         self.client = Client(
@@ -50,7 +50,7 @@ class Store:
                 if attempts != self._connect_attempts:
                     attempts += 1
                     continue
-                raise e
+                raise
 
     def cache_set(self, key, value, time=0):
         attempts = 1

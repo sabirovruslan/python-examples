@@ -218,10 +218,10 @@ class MethodRequest(Request):
 
 
 class RequestHandler:
-    def execute(self, request, arguments, ctx):
+    def execute(self, request, arguments, ctx, store):
         if not arguments.is_valid():
             return arguments.get_error_to_string(), INVALID_REQUEST
-        return self.handle(request, arguments, ctx, None)
+        return self.handle(request, arguments, ctx, store)
 
     def handle(self, request, arguments, ctx, store):
         return {}, OK
@@ -276,7 +276,7 @@ def method_handler(request, ctx, store):
     handler = config_handlers.get(method_request.method)
     if not handler:
         return "Method not found", NOT_FOUND
-    return handler().execute(method_request, handler.type(method_request.arguments), ctx)
+    return handler().execute(method_request, handler.type(method_request.arguments), ctx, store)
 
 
 class MainHTTPHandler(BaseHTTPRequestHandler):
