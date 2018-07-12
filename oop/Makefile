@@ -4,14 +4,10 @@ PROJECT_NAME := otus-oop
 build:
 	docker build -t $(PROJECT_NAME) .
 
-.PHONY: unit-test
-unit-test: build
-	docker run -it --rm ${PROJECT_NAME} python test.py
-
-.PHONY: oop
-oop: build
-	docker run -v `pwd`:/usr/src/ -it --rm ${PROJECT_NAME} python api.py
+.PHONY: memcached
+memcached:
+	docker run -d -p 127.0.0.1:11211:11211 --name store memcached
 
 .PHONY: test
 test: build
-	docker run -it --rm ${PROJECT_NAME} python setup.py test
+	docker run -it --rm --link store:store ${PROJECT_NAME} python setup.py test

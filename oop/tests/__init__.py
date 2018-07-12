@@ -3,6 +3,7 @@ import unittest
 from tests.test_api import ApiTest
 from tests.test_fields import CharFieldTest, ArgumentsFieldTest, EmailFieldTest, PhoneFieldTest, DateFieldTest, \
     BirthDayFieldTest
+from tests.test_store import StoreTest
 
 
 def suite():
@@ -14,6 +15,7 @@ def suite():
     test_suite.addTest(unittest.makeSuite(DateFieldTest))
     test_suite.addTest(unittest.makeSuite(BirthDayFieldTest))
     test_suite.addTest(unittest.makeSuite(ApiTest))
+    test_suite.addTest(unittest.makeSuite(StoreTest))
     return test_suite
 
 
