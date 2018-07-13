@@ -34,9 +34,9 @@ class MemcacheAdapter(CacheAdapter):
 
 class Store:
 
-    def __init__(self, cache_adapter: CacheAdapter, connect_attempts=None):
+    def __init__(self, cache_adapter: CacheAdapter, reconnect_attempts=None):
         self._cache = cache_adapter
-        self._connect_attempts = connect_attempts or 1
+        self._reconnect_attempts = reconnect_attempts or 1
 
     def get(self, key):
         return self._cache.get(key)
@@ -47,7 +47,7 @@ class Store:
             try:
                 return self._cache.get(key)
             except Exception as e:
-                if attempts != self._connect_attempts:
+                if attempts != self._reconnect_attempts:
                     attempts += 1
                     continue
                 raise
@@ -58,7 +58,7 @@ class Store:
             try:
                 return self._cache.set(key, value, time)
             except Exception as e:
-                if attempts != self._connect_attempts:
+                if attempts != self._reconnect_attempts:
                     attempts += 1
                     continue
                 raise
