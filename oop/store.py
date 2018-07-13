@@ -1,4 +1,5 @@
 from abc import ABCMeta
+from time import sleep
 
 from pymemcache.client.base import Client
 
@@ -34,9 +35,10 @@ class MemcacheAdapter(CacheAdapter):
 
 class Store:
 
-    def __init__(self, cache_adapter: CacheAdapter, reconnect_attempts=None):
+    def __init__(self, cache_adapter: CacheAdapter, reconnect_attempts=1, reconnect_timeout=0):
         self._cache = cache_adapter
-        self._reconnect_attempts = reconnect_attempts or 1
+        self._reconnect_attempts = reconnect_attempts
+        self._reconnect_timeout = reconnect_timeout
 
     def get(self, key):
         return self._cache.get(key)
@@ -49,6 +51,7 @@ class Store:
             except Exception as e:
                 if attempts != self._reconnect_attempts:
                     attempts += 1
+                    sleep(self._reconnect_timeout)
                     continue
                 raise
 
@@ -60,5 +63,6 @@ class Store:
             except Exception as e:
                 if attempts != self._reconnect_attempts:
                     attempts += 1
+                    sleep(self._reconnect_timeout)
                     continue
                 raise
