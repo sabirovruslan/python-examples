@@ -1,7 +1,24 @@
 from abc import ABCMeta
+from functools import wraps
 from time import sleep
 
 from pymemcache.client.base import Client
+
+
+def retrying(f):
+    @wraps(f)
+    def decorator(self, *args, **kwargs):
+        attempts = 1
+        while True:
+            try:
+                return f(self, *args, **kwargs)
+            except Exception as e:
+                if attempts == self._reconnect_attempts:
+                    raise
+                attempts += 1
+                sleep(self._reconnect_timeout)
+
+    return decorator
 
 
 class CacheAdapter:
@@ -43,26 +60,10 @@ class Store:
     def get(self, key):
         return self._cache.get(key)
 
+    @retrying
     def cache_get(self, key):
-        attempts = 1
-        while True:
-            try:
-                return self._cache.get(key)
-            except Exception as e:
-                if attempts != self._reconnect_attempts:
-                    attempts += 1
-                    sleep(self._reconnect_timeout)
-                    continue
-                raise
+        return self._cache.get(key)
 
+    @retrying
     def cache_set(self, key, value, time=0):
-        attempts = 1
-        while True:
-            try:
-                return self._cache.set(key, value, time)
-            except Exception as e:
-                if attempts != self._reconnect_attempts:
-                    attempts += 1
-                    sleep(self._reconnect_timeout)
-                    continue
-                raise
+        return self._cache.set(key, value, time)
