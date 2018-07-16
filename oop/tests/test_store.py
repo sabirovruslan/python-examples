@@ -51,3 +51,20 @@ class StoreTest(TestCase):
             port=8000
         ))
         self.assertEqual(store.cache_get(key), None)
+
+    @cases(['4321', 4321, 'test'])
+    def test_get(self, value):
+        store = Store(MemcacheAdapter(
+            address=os.environ['STORE_PORT_11211_TCP_ADDR'],
+            port=os.environ['STORE_PORT_11211_TCP_PORT']
+        ))
+        store.cache_set('test_get', value)
+        self.assertNotEqual(store.get('test_get'), None)
+
+    @cases(['get_4321', '_key', 'test'])
+    def test_get_empty_value(self, key):
+        store = Store(MemcacheAdapter(
+            address=os.environ['STORE_PORT_11211_TCP_ADDR'],
+            port=os.environ['STORE_PORT_11211_TCP_PORT']
+        ))
+        self.assertEqual(store.get(key), None)
