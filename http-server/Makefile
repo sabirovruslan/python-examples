@@ -6,4 +6,5 @@ build:
 
 .PHONY: server
 server: build
+	docker rm -f server || true
 	docker run -it --rm -p 80:80 -h http-server --name server ${PROJECT_NAME} python httpd.py
