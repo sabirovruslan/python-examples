@@ -3,6 +3,7 @@ import os
 import socket
 from argparse import ArgumentParser
 from datetime import datetime
+from urllib import parse
 
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 80
@@ -35,39 +36,32 @@ class HttpServer:
 
         while True:
             data = sock.recv(DEFAULT_BUFFER_SIZE)
-            if not data:
-                break
-            data = data.decode('utf-8')
-            method = data.split(' ')[0]
-            if method not in AVAILABLE_METHODS:
-                logging.exception(f'Unknown HTTP request method: {method}')
-                continue
-
-            file_requested = data.split(' ')
-            file_requested = file_requested[1]
-            file_requested = file_requested.split('?')[0]
-
-            if file_requested == '/':
-                file_requested = '/index.html'
-
-            path = self.document_root + file_requested
-            logging.info(f'Path: {path}')
             body = ''
-            try:
-                rd = open(path, 'rb')
-                if method == 'GET':
-                    body = rd.read()
-                rd.close()
-                headers = self._create_headers(200)
-            except Exception as e:
-                headers = self._create_headers(404)
+            if data:
+                data = data.decode('utf-8')
+                method = data.split(' ')[0]
+                if method not in AVAILABLE_METHODS:
+                    logging.exception(f'Unknown HTTP request method: {method}')
+                    continue
 
-                if method == 'GET':
-                    response_content = b"<html><body><p>Error 404: File not found</p><p>Otus HTTP server</p></body></html>"
-
+                path_string = data.split(' ')[1]
+                path_unquoted = parse.unquote(path_string)
+                path_wo_args = path_unquoted.split('?', 1)[0]
+                if path_wo_args.endswith('/'):
+                    path_wo_args += 'index.html'
+                path = os.path.join(self.document_root, *path_wo_args.split('/'))
+                try:
+                    if method == 'GET':
+                        with open(path, 'rb') as rd:
+                            body = rd.read()
+                    headers = self._create_headers(200)
+                except Exception as e:
+                    headers = self._create_headers(404)
+            else:
+                headers = self._create_headers(405)
             response = headers.encode('utf-8')
-            if method == 'GET':
-                response += body.encode('utf-8')
+            if body:
+                response += body
 
             sock.send(response)
             sock.close()
@@ -75,9 +69,11 @@ class HttpServer:
     def _create_headers(self, code):
         h = ''
         if code == 200:
-            h = 'HTTP/1.1 200 OK\n'
+            h = 'HTTP/1.1 200 OK\r\n'
         elif code == 404:
-            h = 'HTTP/1.1 404 Not Found\n'
+            h = 'HTTP/1.1 404 Not Found\r\n'
+        elif code == 405:
+            h = 'HTTP/1.1 405 ERROR\r\n'
 
         h += 'Date: {}\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
         h += 'Server: Otus-http-server\n'
