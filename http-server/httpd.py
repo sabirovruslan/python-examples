@@ -1,9 +1,10 @@
 import logging
+import mimetypes
 import os
 import socket
 from argparse import ArgumentParser
 from datetime import datetime
-from urllib import parse
+from urllib import parse, request
 
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 80
@@ -53,31 +54,33 @@ class HttpServer:
                 try:
                     if method == 'GET':
                         with open(path, 'rb') as rd:
-                            body = rd.read()
-                    headers = self._create_headers(200)
+                            body = rd.read().decode('utf-8')
+                    headers = self._create_headers(200, path)
                 except Exception as e:
-                    headers = self._create_headers(404)
+                    headers = self._create_headers(404, path)
             else:
-                headers = self._create_headers(405)
-            response = headers.encode('utf-8')
+                headers = self._create_headers(405, path)
+            response = headers
             if body:
                 response += body
 
-            sock.send(response)
+            sock.send(response.encode('utf-8'))
             sock.close()
 
-    def _create_headers(self, code):
+    def _create_headers(self, code, path):
         h = ''
         if code == 200:
-            h = 'HTTP/1.1 200 OK\r\n'
+            h += 'HTTP/1.1 200 OK\r\n'
+            h += 'Server: Otus-http-server\n'
+            h += 'Date: {}\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+            h += 'Content-Length: {}\r\n'.format(os.path.getsize(path))
+            h += 'Content-Type: {}\r\n'.format(mimetypes.guess_type(request.pathname2url(path))[0])
         elif code == 404:
-            h = 'HTTP/1.1 404 Not Found\r\n'
+            h += 'HTTP/1.1 404 Not Found\r\n'
         elif code == 405:
-            h = 'HTTP/1.1 405 ERROR\r\n'
+            h += 'HTTP/1.1 405 ERROR\r\n'
 
-        h += 'Date: {}\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
-        h += 'Server: Otus-http-server\n'
-        h += 'Connection: close\n\n'
+        h += '\r\n'
 
         return h
 
