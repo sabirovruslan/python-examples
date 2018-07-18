@@ -126,3 +126,42 @@ class MainHandlerTest(TestCase):
     def test_method_forbidden(self, request):
         response = requests.post(self.handler_url, json=request)
         self.assertEqual(response.status_code, 403)
+
+    def test_method_bad_request(self):
+        response = requests.post(self.handler_url)
+        self.assertEqual(response.status_code, 400)
+
+    @cases([
+        {
+            'account': 'account_test',
+            'login': 'login',
+            'method': 'online_score',
+            'token': '',
+            'arguments': {
+                'phone': '79175002040',
+                'email': 'stupnikov@otus.ru',
+                'first_name': 'Test',
+                'last_name': 'Testovich',
+                'birthday': '01.01.2000',
+                'gender': '4'
+            }
+        },
+        {
+            'account': 'account_test',
+            'login': 'login',
+            'method': 'online_score',
+            'token': '',
+            'arguments': {
+                'phone': '89175002040',
+                'email': 'stupn@ikov@otus.ru',
+                'first_name': 'Test',
+                'last_name': 'Testovich',
+                'birthday': '01.01.2000',
+                'gender': 1
+            }
+        }
+    ])
+    def test_score_request_invalid_request(self, request):
+        self.set_valid_auth(request)
+        response = requests.post(self.handler_url, json=request)
+        self.assertEqual(response.status_code, 422)
