@@ -82,11 +82,23 @@ class BirthDayFieldTest(TestCase):
         field = BirthDayField()
         self.assertEqual(field.parse(value), value)
 
-    @cases(['12.01.1900', '', '312.01.2017', 'OO.OO.OOOO'])
+    @cases(['12.01.1900', '', '312.01.2017', 'OO.OO.OOOO', '2015.04.14'])
     def test_invalid(self, value):
         field = BirthDayField()
         with self.assertRaises(ValidateFieldError):
             field.parse(value)
+
+    @cases(['2015.04.14', '1990.01.12', '1948.01.12'])
+    def test_valid_format_date(self, value):
+        field = BirthDayField(format='%Y.%m.%d')
+        self.assertEqual(field.parse(value), value)
+
+    @cases(['12.01.2017', '12.01.1948', '12.01.1990'])
+    def test_valid_invalid_format_date(self, value):
+        field = BirthDayField(format='%Y.%m.%d')
+        with self.assertRaises(ValidateFieldError):
+            field.parse(value)
+
 
 class ClientIDsFieldTest(TestCase):
 
@@ -100,6 +112,7 @@ class ClientIDsFieldTest(TestCase):
         field = ClientIDsField()
         with self.assertRaises(ValidateFieldError):
             field.parse(value)
+
 
 class GenderFieldTest(TestCase):
 
