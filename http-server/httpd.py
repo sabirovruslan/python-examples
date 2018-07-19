@@ -45,14 +45,16 @@ class HttpServer:
                     logging.exception(f'Unknown HTTP request method: {method}')
                     response = self._create_headers(405)
                 else:
-                    path_string = data.split(' ')[1]
-                    path_unquoted = parse.unquote(path_string)
-                    path_wo_args = path_unquoted.split('?', 1)[0]
-                    print(f'path_wo_args: {path_wo_args}')
-                    if path_wo_args.endswith('/'):
-                        path_wo_args += 'index.html'
-                    path = os.path.join(self.document_root, *path_wo_args.split('/'))
                     try:
+                        path_string = data.split(' ')[1]
+                        path_unquoted = parse.unquote(path_string)
+                        path_wo_args = path_unquoted.split('?', 1)[0]
+                        print(f'path_wo_args: {path_wo_args}')
+                        if path_wo_args.endswith('/'):
+                            path_wo_args += 'index.html'
+                        path = os.path.join(self.document_root, *path_wo_args.split('/'))
+                        if '/..' in path:
+                            raise Exception('Access denied')
                         if method == 'GET':
                             with open(path, 'rb') as rd:
                                 body = rd.read()
