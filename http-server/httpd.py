@@ -32,42 +32,43 @@ class HttpServer:
         self.sock.shutdown(socket.SHUT_RDWR)
 
     def _wait_for_connections(self):
-        self.sock.listen(DEFAULT_LISTEN)
-        sock, address = self.sock.accept()
-
         while True:
+            self.sock.listen(DEFAULT_LISTEN)
+            sock, address = self.sock.accept()
             data = sock.recv(DEFAULT_BUFFER_SIZE)
             body = ''
+            response = ''
             if data:
                 data = data.decode('utf-8')
                 method = data.split(' ')[0]
                 if method not in AVAILABLE_METHODS:
                     logging.exception(f'Unknown HTTP request method: {method}')
-                    continue
-
-                path_string = data.split(' ')[1]
-                path_unquoted = parse.unquote(path_string)
-                path_wo_args = path_unquoted.split('?', 1)[0]
-                if path_wo_args.endswith('/'):
-                    path_wo_args += 'index.html'
-                path = os.path.join(self.document_root, *path_wo_args.split('/'))
-                try:
-                    if method == 'GET':
-                        with open(path, 'rb') as rd:
-                            body = rd.read().decode('utf-8')
-                    headers = self._create_headers(200, path)
-                except Exception as e:
-                    headers = self._create_headers(404, path)
+                    response = self._create_headers(405)
+                else:
+                    path_string = data.split(' ')[1]
+                    path_unquoted = parse.unquote(path_string)
+                    path_wo_args = path_unquoted.split('?', 1)[0]
+                    print(f'path_wo_args: {path_wo_args}')
+                    if path_wo_args.endswith('/'):
+                        path_wo_args += 'index.html'
+                    path = os.path.join(self.document_root, *path_wo_args.split('/'))
+                    try:
+                        if method == 'GET':
+                            with open(path, 'rb') as rd:
+                                body = rd.read()
+                        response = self._create_headers(200, path)
+                    except Exception as e:
+                        logging.exception(e)
+                        response = self._create_headers(404, path)
             else:
-                headers = self._create_headers(405, path)
-            response = headers
+                response = self._create_headers(405)
             if body:
                 response += body
 
-            sock.send(response.encode('utf-8'))
+            sock.send(response)
             sock.close()
 
-    def _create_headers(self, code, path):
+    def _create_headers(self, code, path=''):
         h = ''
         if code == 200:
             h += 'HTTP/1.1 200 OK\r\n'
@@ -81,8 +82,7 @@ class HttpServer:
             h += 'HTTP/1.1 405 ERROR\r\n'
 
         h += '\r\n'
-
-        return h
+        return h.encode('utf-8')
 
 
 if __name__ == '__main__':
