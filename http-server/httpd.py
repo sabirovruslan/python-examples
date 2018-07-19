@@ -72,8 +72,7 @@ class HttpServer:
         h = ''
         if code == 200:
             h += 'HTTP/1.1 200 OK\r\n'
-            h += 'Server: Otus-http-server\n'
-            h += 'Date: {}\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
+            h += 'Date: {}\r\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
             h += 'Content-Length: {}\r\n'.format(os.path.getsize(path))
             h += 'Content-Type: {}\r\n'.format(mimetypes.guess_type(request.pathname2url(path))[0])
         elif code == 404:
@@ -81,7 +80,9 @@ class HttpServer:
         elif code == 405:
             h += 'HTTP/1.1 405 ERROR\r\n'
 
+        h += 'Server: Otus-http-server\r\n'
         h += '\r\n'
+        print(h)
         return h.encode('utf-8')
 
 
