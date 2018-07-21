@@ -12,6 +12,17 @@ DEFAULT_PORT = 80
 AVAILABLE_METHODS = ['GET', 'HEAD']
 DEFAULT_BUFFER_SIZE = 1024
 
+OK = 200
+BAD_REQUEST = 400
+FORBIDDEN = 403
+NOT_FOUND = 404
+NOT_ALLOWED = 405
+
+class BadRequestException(Exception):
+    pass
+
+class ForbiddenException(Exception):
+    pass
 
 class HttpServer:
 
@@ -35,47 +46,55 @@ class HttpServer:
             sock, address = self.sock.accept()
             data = sock.recv(DEFAULT_BUFFER_SIZE)
             body = ''
-            if data:
+            try:
                 data = data.decode('utf-8')
                 method = data.split(' ')[0]
                 if method not in AVAILABLE_METHODS:
-                    logging.exception(f'Unknown HTTP request method: {method}')
-                    response = self._create_headers(405)
-                else:
-                    try:
-                        path_string = data.split(' ')[1]
-                        path_unquoted = parse.unquote(path_string)
-                        path_wo_args = path_unquoted.split('?', 1)[0]
-                        if path_wo_args.endswith('/'):
-                            path_wo_args += 'index.html'
-                        path = os.path.join(self.document_root, *path_wo_args.split('/'))
-                        if '/..' in path:
-                            raise Exception('Access denied')
-                        if method == 'GET':
-                            with open(path, 'rb') as rd:
-                                body = rd.read()
-                        response = self._create_headers(200, path)
-                    except Exception:
-                        response = self._create_headers(404)
-            else:
-                response = self._create_headers(405)
+                    raise BadRequestException('Not available method')
+                path_string = data.split(' ')[1]
+                path = self._parse_path(path_string)
+                if method == 'GET':
+                    with open(path, 'rb') as rd:
+                        body = rd.read()
+                response = self._create_headers(OK, path)
+            except (FileNotFoundError, NotADirectoryError):
+                response = self._create_headers(NOT_FOUND)
+            except BadRequestException:
+                response = self._create_headers(BAD_REQUEST)
+            except ForbiddenException:
+                response = self._create_headers(FORBIDDEN)
+            except Exception:
+                response = self._create_headers(NOT_ALLOWED)
             if body:
                 response += body
-
             sock.send(response)
             sock.close()
 
+    def _parse_path(self, path_string):
+        path_unquoted = parse.unquote(path_string)
+        path_wo_args = path_unquoted.split('?', 1)[0]
+        if path_wo_args.endswith('/'):
+            path_wo_args += 'index.html'
+        path = os.path.join(self.document_root, *path_wo_args.split('/'))
+        if '/..' in path:
+            raise ForbiddenException('Access denied')
+        return path
+
     def _create_headers(self, code, path=''):
         h = ''
-        if code == 200:
-            h += 'HTTP/1.1 200 OK\r\n'
+        if code == OK:
+            h += f'HTTP/1.1 {OK} OK\r\n'
             h += 'Date: {}\r\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
             h += 'Content-Length: {}\r\n'.format(os.path.getsize(path))
             h += 'Content-Type: {}\r\n'.format(mimetypes.guess_type(request.pathname2url(path))[0])
-        elif code == 404:
-            h += 'HTTP/1.1 404 Not Found\r\n'
-        elif code == 405:
-            h += 'HTTP/1.1 405 ERROR\r\n'
+        elif code == NOT_FOUND:
+            h += f'HTTP/1.1 {NOT_FOUND} Not Found\r\n'
+        elif code == NOT_ALLOWED:
+            h += f'HTTP/1.1 {NOT_ALLOWED} ERROR\r\n'
+        elif code == BAD_REQUEST:
+            h += f'HTTP/1.1 {BAD_REQUEST} BAD REQUEST\r\n'
+        elif code == FORBIDDEN:
+            h += f'HTTP/1.1 {FORBIDDEN} FORBIDDEN\r\n'
 
         h += 'Server: Otus-http-server\r\n'
         h += '\r\n'
