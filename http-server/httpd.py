@@ -4,12 +4,12 @@ import os
 import socket
 from argparse import ArgumentParser
 from datetime import datetime
+from multiprocessing import Process
 from urllib import parse, request
 
 DEFAULT_HOST = 'localhost'
 DEFAULT_PORT = 80
 AVAILABLE_METHODS = ['GET', 'HEAD']
-DEFAULT_LISTEN = 100
 DEFAULT_BUFFER_SIZE = 1024
 
 
@@ -19,25 +19,22 @@ class HttpServer:
         self.hostname = kwargs.get('hostname', DEFAULT_HOST)
         self.port = kwargs.get('port', DEFAULT_PORT)
         self.document_root = kwargs.get('document_root')
-        self.sock = None
+        self.sock = self._init_sock()
 
-    def start(self):
-        logging.info('Server start...')
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.bind((self.hostname, self.port))
-        self._wait_for_connections()
+    def _init_sock(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.bind((self.hostname, self.port))
+        sock.listen(1)
+        logging.info('Server start')
 
-    def stop(self):
-        logging.info('Server stop...')
-        self.sock.shutdown(socket.SHUT_RDWR)
+        return sock
 
-    def _wait_for_connections(self):
+    def wait_for(self):
+        logging.info('Start worker: {}'.format(os.getpid()))
         while True:
-            self.sock.listen(DEFAULT_LISTEN)
             sock, address = self.sock.accept()
             data = sock.recv(DEFAULT_BUFFER_SIZE)
             body = ''
-            response = ''
             if data:
                 data = data.decode('utf-8')
                 method = data.split(' ')[0]
@@ -49,7 +46,6 @@ class HttpServer:
                         path_string = data.split(' ')[1]
                         path_unquoted = parse.unquote(path_string)
                         path_wo_args = path_unquoted.split('?', 1)[0]
-                        print(f'path_wo_args: {path_wo_args}')
                         if path_wo_args.endswith('/'):
                             path_wo_args += 'index.html'
                         path = os.path.join(self.document_root, *path_wo_args.split('/'))
@@ -59,9 +55,8 @@ class HttpServer:
                             with open(path, 'rb') as rd:
                                 body = rd.read()
                         response = self._create_headers(200, path)
-                    except Exception as e:
-                        logging.exception(e)
-                        response = self._create_headers(404, path)
+                    except Exception:
+                        response = self._create_headers(404)
             else:
                 response = self._create_headers(405)
             if body:
@@ -84,13 +79,12 @@ class HttpServer:
 
         h += 'Server: Otus-http-server\r\n'
         h += '\r\n'
-        print(h)
         return h.encode('utf-8')
 
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument('-w', help='Number of workers', default=100)
+    parser.add_argument('-w', help='Number of workers', default=4)
     parser.add_argument('-r', help='document root', default=os.path.abspath(os.path.dirname(__file__)))
     args = parser.parse_args()
 
@@ -104,9 +98,19 @@ if __name__ == '__main__':
         hostname=os.environ.get('HOSTNAME'),
         document_root=os.path.abspath(args.r)
     )
+
+    process_list = []
+    for _ in range(int(args.w)):
+        p = Process(target=server.wait_for)
+        p.daemon = True
+        p.start()
+        process_list.append(p)
+
     try:
-        server.start()
+        for p in process_list:
+            p.join()
     except KeyboardInterrupt:
-        pass
-    finally:
-        server.stop()
+        for p in process_list:
+            if p.is_alive():
+                logging.info('Stop worker: {}'.format(p.pid))
+                p.terminate()
