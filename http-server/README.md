@@ -64,7 +64,7 @@ post method forbidden ... ok
 Server header exists ... ok
 
 ----------------------------------------------------------------------
-Ran 23 tests in 0.047s
+Ran 23 tests in 0.032s
 
 OK
 
@@ -73,23 +73,23 @@ OK
 ### Результаты ab тестов 4 воркера
 
 ```
-ab -n 75000 -c 100 -r -s 60  http://127.0.0.1/httptest/dir2/
+ab -n 100000 -c 100 -r -s 60  http://127.0.0.1/httptest/dir2/
 This is ApacheBench, Version 2.3 <$Revision: 1706008 $>
 Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
 Licensed to The Apache Software Foundation, http://www.apache.org/
 
 Benchmarking 127.0.0.1 (be patient)
-Completed 7500 requests
-Completed 15000 requests
-Completed 22500 requests
+Completed 10000 requests
+Completed 20000 requests
 Completed 30000 requests
-Completed 37500 requests
-Completed 45000 requests
-Completed 52500 requests
+Completed 40000 requests
+Completed 50000 requests
 Completed 60000 requests
-Completed 67500 requests
-Completed 75000 requests
-Finished 75000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
 
 
 Server Software:        Otus-http-server
@@ -100,35 +100,33 @@ Document Path:          /httptest/dir2/
 Document Length:        34 bytes
 
 Concurrency Level:      100
-Time taken for tests:   109.126 seconds
-Complete requests:      75000
-Failed requests:        29
-   (Connect: 0, Receive: 0, Length: 29, Exceptions: 0)
-Total transferred:      11320621 bytes
-HTML transferred:       2549014 bytes
-Requests per second:    687.28 [#/sec] (mean)
-Time per request:       145.501 [ms] (mean)
-Time per request:       1.455 [ms] (mean, across all concurrent requests)
-Transfer rate:          101.31 [Kbytes/sec] received
+Time taken for tests:   27.751 seconds
+Complete requests:      100000
+Failed requests:        3
+   (Connect: 0, Receive: 1, Length: 1, Exceptions: 1)
+Total transferred:      15099849 bytes
+HTML transferred:       3399966 bytes
+Requests per second:    3603.46 [#/sec] (mean)
+Time per request:       27.751 [ms] (mean)
+Time per request:       0.278 [ms] (mean, across all concurrent requests)
+Transfer rate:          531.36 [Kbytes/sec] received
 
 Connection Times (ms)
               min  mean[+/-sd] median   max
-Connect:        0    0   0.4      0      18
-Processing:     0   72 2215.2      1  109108
-Waiting:        0   30 586.5      1   55859
-Total:          0   72 2215.5      1  109125
+Connect:        0    0   0.3      0      12
+Processing:     0   22 304.2      2   27738
+Waiting:        0   22 304.2      2   27738
+Total:          0   23 304.3      3   27749
 
 Percentage of the requests served within a certain time (ms)
-  50%      1
-  66%      1
-  75%      1
-  80%      1
-  90%      1
-  95%      2
-  98%      5
-  99%   1021
- 100%  109125 (longest request)
+  50%      3
+  66%      3
+  75%      3
+  80%      4
+  90%      5
+  95%      6
+  98%     11
+  99%   1019
+ 100%  27749 (longest request)
 
 ```
-
-падает на 79950 запросах
