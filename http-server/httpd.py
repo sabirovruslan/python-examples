@@ -20,28 +20,32 @@ class RequestHandler:
 
     def __init__(self, sock):
         self.sock = sock
+        self.headers = None
+        self.body = None
 
     def handle_request(self):
-        data = self.sock.recv(self.DEFAULT_BUFFER_SIZE)
-        data = data.decode('utf-8')
-        method = data.split(' ')[0]
-        body = ''
+        try:
+            data = self.sock.recv(self.DEFAULT_BUFFER_SIZE)
+            data = data.decode('utf-8')
+            method = data.split(' ')[0]
+        except Exception:
+            self._create_headers(NOT_ALLOWED)
+            self.send_response()
+            return
         if method not in self.AVAILABLE_METHODS:
-            response = self._create_headers(BAD_REQUEST)
-        else:
-            try:
-                path_string = data.split(' ')[1]
-                path = self._parse_path(path_string)
-                if method == 'GET':
-                    with open(path, 'rb') as rd:
-                        body = rd.read()
-                response = self._create_headers(OK, path)
-            except (FileNotFoundError, NotADirectoryError):
-                response = self._create_headers(NOT_FOUND)
-        if body:
-            response += body
-        self.sock.send(response)
-        self.sock.close()
+            self.headers = self._create_headers(BAD_REQUEST)
+            self.send_response()
+            return
+        try:
+            path_string = data.split(' ')[1]
+            path = self._parse_path(path_string)
+            if method == 'GET':
+                with open(path, 'rb') as rd:
+                    self.body = rd.read()
+            self.headers = self._create_headers(OK, path)
+        except (FileNotFoundError, NotADirectoryError):
+            self.headers = self._create_headers(NOT_FOUND)
+        self.send_response()
 
     def _parse_path(self, path_string):
         path_unquoted = parse.unquote(path_string)
@@ -86,6 +90,13 @@ class RequestHandler:
         h += 'Server: Otus-http-server\r\n'
         h += '\r\n'
         return h.encode('utf-8')
+
+    def send_response(self):
+        response = self.headers
+        if self.body:
+            response += self.body
+        self.sock.send(response)
+        self.sock.close()
 
 
 class HttpServer:
