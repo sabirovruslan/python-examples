@@ -70,7 +70,7 @@ OK
 
 ```
 
-### Результаты ab тестов 4 воркера
+### Результаты ab тестов 4 воркера 60s
 
 ```
 ab -n 100000 -c 100 -r -s 60  http://127.0.0.1/httptest/dir2/
@@ -128,5 +128,64 @@ Percentage of the requests served within a certain time (ms)
   98%     11
   99%   1019
  100%  27749 (longest request)
+
+```
+
+### Результаты ab тестов 4 воркера
+```
+ab -n 100000 -c 100 -r http://127.0.0.1/httptest/dir2/
+This is ApacheBench, Version 2.3 <$Revision: 1706008 $>
+Copyright 1996 Adam Twiss, Zeus Technology Ltd, http://www.zeustech.net/
+Licensed to The Apache Software Foundation, http://www.apache.org/
+
+Benchmarking 127.0.0.1 (be patient)
+Completed 10000 requests
+Completed 20000 requests
+Completed 30000 requests
+Completed 40000 requests
+Completed 50000 requests
+Completed 60000 requests
+Completed 70000 requests
+Completed 80000 requests
+Completed 90000 requests
+Completed 100000 requests
+Finished 100000 requests
+
+
+Server Software:        Otus-http-server
+Server Hostname:        127.0.0.1
+Server Port:            80
+
+Document Path:          /httptest/dir2/
+Document Length:        34 bytes
+
+Concurrency Level:      100
+Time taken for tests:   21.769 seconds
+Complete requests:      100000
+Failed requests:        0
+Total transferred:      15100000 bytes
+HTML transferred:       3400000 bytes
+Requests per second:    4593.65 [#/sec] (mean)
+Time per request:       21.769 [ms] (mean)
+Time per request:       0.218 [ms] (mean, across all concurrent requests)
+Transfer rate:          677.38 [Kbytes/sec] received
+
+Connection Times (ms)
+              min  mean[+/-sd] median   max
+Connect:        0    0   0.4      0      15
+Processing:     0   21 153.7      2    3864
+Waiting:        0   21 153.7      2    3864
+Total:          0   21 153.8      2    3874
+
+Percentage of the requests served within a certain time (ms)
+  50%      2
+  66%      3
+  75%      3
+  80%      3
+  90%      4
+  95%      6
+  98%     12
+  99%   1022
+ 100%   3874 (longest request)
 
 ```
