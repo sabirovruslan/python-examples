@@ -29,7 +29,7 @@ class RequestHandler:
             data = data.decode('utf-8')
             method = data.split(' ')[0]
         except Exception:
-            self._create_headers(NOT_ALLOWED)
+            self.headers = self._create_headers(NOT_ALLOWED)
             self.send_response()
             return
         if method not in self.AVAILABLE_METHODS:
