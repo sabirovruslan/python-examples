@@ -12,16 +12,17 @@ Requires(post): systemd
 Requires(preun): systemd
 Requires(postun): systemd
 BuildRequires: systemd
-Requires:	
-Summary:  ...
+Requires: python3.6
+Summary: Otus uWSGI daemon
 
 
 %description
-...
+Gets weather forecast by ip address
+
 Git version: %{git_version} (branch: %{git_branch})
 
 %define __etcdir    /usr/local/etc
-%define __logdir    /val/log/
+%define __logdir    /var/log/
 %define __bindir    /usr/local/ip2w/
 %define __systemddir	/usr/lib/systemd/system/
 
@@ -30,9 +31,17 @@ Git version: %{git_version} (branch: %{git_branch})
 
 %install
 [ "%{buildroot}" != "/" ] && rm -fr %{buildroot}
+
+%{__mkdir} -p %{buildroot}/%{__etcdir}
+%{__install} -pD -m 644 %{name}.cfg %{buildroot}/%{__etcdir}/%{name}.cfg
+
+%{__mkdir} -p %{buildroot}/%{__logdir}
+
+%{__mkdir} -p %{buildroot}/%{__bindir}
+%{__install} -pD -m 755 %{name}.py %{buildroot}/%{__bindir}/%{name}.py
+
 %{__mkdir} -p %{buildroot}/%{__systemddir}
-%{__install} -pD -m 644 ... %{buildroot}/%{__systemddir}/%{name}.service
-...
+%{__install} -pD -m 644 %{name}.service %{buildroot}/%{__systemddir}/%{name}.service
 
 %post
 %systemd_post %{name}.service
@@ -53,4 +62,4 @@ systemctl daemon-reload
 %{__bindir}
 %{__systemddir}
 %{__sysconfigdir}
-...
+%{__etcdir}
