@@ -16,24 +16,38 @@ NOT_ALLOWED = 405
 
 class RequestHandler:
     AVAILABLE_METHODS = ['GET', 'HEAD']
-    DEFAULT_BUFFER_SIZE = 1024
+    DEFAULT_BUFFER_SIZE = 10
+    END_POINT = b'\r\n\r\n'
 
     def __init__(self, sock):
         self.sock = sock
-        self.headers = None
+        self.headers = []
         self.body = None
+
+    def _read_request(self):
+        result = b''
+        while True:
+            r = self.sock.recv(self.DEFAULT_BUFFER_SIZE)
+            if not r:
+                raise Exception('Connection close')
+            result += r
+            if self.END_POINT in result:
+                return result.decode('utf-8')
 
     def handle_request(self):
         try:
-            data = self.sock.recv(self.DEFAULT_BUFFER_SIZE)
-            data = data.decode('utf-8')
+            data = self._read_request()
+        except:
+            return
+
+        try:
             method = data.split(' ')[0]
         except Exception:
-            self.headers = self._create_headers(NOT_ALLOWED)
+            self.send_headers(NOT_ALLOWED)
             self.send_response()
             return
         if method not in self.AVAILABLE_METHODS:
-            self.headers = self._create_headers(BAD_REQUEST)
+            self.send_headers(BAD_REQUEST)
             self.send_response()
             return
         try:
@@ -42,60 +56,40 @@ class RequestHandler:
             if method == 'GET':
                 with open(path, 'rb') as rd:
                     self.body = rd.read()
-            self.headers = self._create_headers(OK, path)
+            self.send_headers(OK, path)
         except (FileNotFoundError, NotADirectoryError):
-            self.headers = self._create_headers(NOT_FOUND)
+            self.send_headers(NOT_FOUND)
         self.send_response()
 
     def _parse_path(self, path_string):
         path_unquoted = parse.unquote(path_string)
         path_wo_args = path_unquoted.split('?', 1)[0]
-        path_wo_args = self._remove_dot_segments(path_wo_args)
         if path_wo_args.endswith('/'):
             path_wo_args += 'index.html'
-        path = os.path.join(DOCUMENT_ROOT, *path_wo_args.split('/'))
-        return path
+        path = os.path.normpath(path_wo_args)
+        return os.path.join(DOCUMENT_ROOT, *path.split('/'))
 
-    @staticmethod
-    def _remove_dot_segments(path):
-        if path.startswith('.'):
-            path = '/' + path
-        while '../' in path:
-            p1 = path.find('/..')
-            p2 = path.rfind('/', 0, p1)
-            if p2 != -1:
-                path = path[:p2] + path[p1 + 3:]
-            else:
-                path = path.replace('/..', '', 1)
-        path = path.replace('/./', '/')
-        path = path.replace('/.', '')
-        return path
-
-    def _create_headers(self, code, path=''):
-        h = ''
+    def send_headers(self, code, path=''):
         if code == OK:
-            h += f'HTTP/1.1 {OK} OK\r\n'
-            h += 'Date: {}\r\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S'))
-            h += 'Content-Length: {}\r\n'.format(os.path.getsize(path))
-            h += 'Content-Type: {}\r\n'.format(mimetypes.guess_type(request.pathname2url(path))[0])
+            self.sock.send(f'HTTP/1.1 {OK} OK\r\n'.encode('utf-8'))
+            self.sock.send('Date: {}\r\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S')).encode('utf-8'))
+            self.sock.send('Content-Length: {}\r\n'.format(os.path.getsize(path)).encode('utf-8'))
+            self.sock.send('Content-Type: {}\r\n'.format(mimetypes.guess_type(request.pathname2url(path))[0]).encode('utf-8'))
         elif code == NOT_FOUND:
-            h += f'HTTP/1.1 {NOT_FOUND} Not Found\r\n'
+            self.sock.send(f'HTTP/1.1 {NOT_FOUND} Not Found\r\n'.encode('utf-8'))
         elif code == NOT_ALLOWED:
-            h += f'HTTP/1.1 {NOT_ALLOWED} ERROR\r\n'
+            self.sock.send(f'HTTP/1.1 {NOT_ALLOWED} ERROR\r\n'.encode('utf-8'))
         elif code == BAD_REQUEST:
-            h += f'HTTP/1.1 {BAD_REQUEST} BAD REQUEST\r\n'
+            self.sock.send(f'HTTP/1.1 {BAD_REQUEST} BAD REQUEST\r\n'.encode('utf-8'))
         elif code == FORBIDDEN:
-            h += f'HTTP/1.1 {FORBIDDEN} FORBIDDEN\r\n'
+            self.sock.send(f'HTTP/1.1 {FORBIDDEN} FORBIDDEN\r\n'.encode('utf-8'))
 
-        h += 'Server: Otus-http-server\r\n'
-        h += '\r\n'
-        return h.encode('utf-8')
+        self.sock.send('Server: Otus-http-server\r\n'.encode('utf-8'))
+        self.sock.send('\r\n'.encode('utf-8'))
 
     def send_response(self):
-        response = self.headers
         if self.body:
-            response += self.body
-        self.sock.send(response)
+            self.sock.send(self.body)
         self.sock.close()
 
 
