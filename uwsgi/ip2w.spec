@@ -27,7 +27,7 @@ Git version: %{git_version} (branch: %{git_branch})
 %define __systemddir	/usr/lib/systemd/system/
 
 %prep
-%setup -n /tmp/bin/rpmbuild/BUILD/
+%setup -n otus-%{current_datetime}
 
 %install
 [ "%{buildroot}" != "/" ] && rm -fr %{buildroot}
