@@ -61,5 +61,4 @@ systemctl daemon-reload
 %{__logdir}
 %{__bindir}
 %{__systemddir}
-%{__sysconfigdir}
 %{__etcdir}
