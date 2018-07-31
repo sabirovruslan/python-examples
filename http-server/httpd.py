@@ -16,23 +16,23 @@ NOT_ALLOWED = 405
 
 class RequestHandler:
     AVAILABLE_METHODS = ['GET', 'HEAD']
-    DEFAULT_BUFFER_SIZE = 10
-    END_POINT = b'\r\n\r\n'
+    RECV_STEP_SIZE = 10
 
     def __init__(self, sock):
         self.sock = sock
         self.headers = []
-        self.body = None
+        self.body = ''
 
     def _read_request(self):
-        result = b''
-        while True:
-            r = self.sock.recv(self.DEFAULT_BUFFER_SIZE)
+        buffer = b''
+        result_size = 0
+        while len(buffer) >= result_size:
+            r = self.sock.recv(self.RECV_STEP_SIZE)
             if not r:
                 raise Exception('Connection close')
-            result += r
-            if self.END_POINT in result:
-                return result.decode('utf-8')
+            buffer += r
+            result_size += self.RECV_STEP_SIZE
+        return buffer.decode('utf-8')
 
     def handle_request(self):
         try:
@@ -43,11 +43,11 @@ class RequestHandler:
         try:
             method = data.split(' ')[0]
         except Exception:
-            self.send_headers(NOT_ALLOWED)
+            self.create_headers(BAD_REQUEST)
             self.send_response()
             return
         if method not in self.AVAILABLE_METHODS:
-            self.send_headers(BAD_REQUEST)
+            self.create_headers(NOT_ALLOWED)
             self.send_response()
             return
         try:
@@ -56,9 +56,9 @@ class RequestHandler:
             if method == 'GET':
                 with open(path, 'rb') as rd:
                     self.body = rd.read()
-            self.send_headers(OK, path)
+            self.create_headers(OK, path)
         except (FileNotFoundError, NotADirectoryError):
-            self.send_headers(NOT_FOUND)
+            self.create_headers(NOT_FOUND)
         self.send_response()
 
     def _parse_path(self, path_string):
@@ -69,27 +69,29 @@ class RequestHandler:
         path = os.path.normpath(path_wo_args)
         return os.path.join(DOCUMENT_ROOT, *path.split('/'))
 
-    def send_headers(self, code, path=''):
+    def create_headers(self, code, path=''):
         if code == OK:
-            self.sock.send(f'HTTP/1.1 {OK} OK\r\n'.encode('utf-8'))
-            self.sock.send('Date: {}\r\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S')).encode('utf-8'))
-            self.sock.send('Content-Length: {}\r\n'.format(os.path.getsize(path)).encode('utf-8'))
-            self.sock.send('Content-Type: {}\r\n'.format(mimetypes.guess_type(request.pathname2url(path))[0]).encode('utf-8'))
+            self.headers.append(f'HTTP/1.1 {OK} OK\r\n')
+            self.headers.append('Date: {}\r\n'.format(datetime.now().strftime('%d-%m-%Y %H:%M:%S')))
+            self.headers.append('Content-Length: {}\r\n'.format(os.path.getsize(path)))
+            self.headers.append('Content-Type: {}\r\n'.format(mimetypes.guess_type(request.pathname2url(path))[0]))
         elif code == NOT_FOUND:
-            self.sock.send(f'HTTP/1.1 {NOT_FOUND} Not Found\r\n'.encode('utf-8'))
+            self.headers.append(f'HTTP/1.1 {NOT_FOUND} Not Found\r\n')
         elif code == NOT_ALLOWED:
-            self.sock.send(f'HTTP/1.1 {NOT_ALLOWED} ERROR\r\n'.encode('utf-8'))
+            self.headers.append(f'HTTP/1.1 {NOT_ALLOWED} ERROR\r\n')
         elif code == BAD_REQUEST:
-            self.sock.send(f'HTTP/1.1 {BAD_REQUEST} BAD REQUEST\r\n'.encode('utf-8'))
+            self.headers.append(f'HTTP/1.1 {BAD_REQUEST} BAD REQUEST\r\n')
         elif code == FORBIDDEN:
-            self.sock.send(f'HTTP/1.1 {FORBIDDEN} FORBIDDEN\r\n'.encode('utf-8'))
+            self.headers.append(f'HTTP/1.1 {FORBIDDEN} FORBIDDEN\r\n')
 
-        self.sock.send('Server: Otus-http-server\r\n'.encode('utf-8'))
-        self.sock.send('\r\n'.encode('utf-8'))
+        self.headers.append('Server: Otus-http-server\r\n')
+        self.headers.append('\r\n')
 
     def send_response(self):
+        response = ''.join(self.headers).encode('utf-8')
         if self.body:
-            self.sock.send(self.body)
+            response += self.body
+        self.sock.sendall(response)
         self.sock.close()
 
 
