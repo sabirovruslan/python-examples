@@ -17,6 +17,7 @@ NOT_ALLOWED = 405
 class RequestHandler:
     AVAILABLE_METHODS = ['GET', 'HEAD']
     RECV_STEP_SIZE = 10
+    DELIMETER = b'\r\n\r\n'
 
     def __init__(self, sock):
         self.sock = sock
@@ -31,6 +32,8 @@ class RequestHandler:
             if not r:
                 raise Exception('Connection close')
             buffer += r
+            if self.DELIMETER in buffer:
+                break
             result_size += self.RECV_STEP_SIZE
         return buffer.decode('utf-8')
 
