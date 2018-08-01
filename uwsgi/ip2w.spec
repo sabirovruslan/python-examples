@@ -33,7 +33,7 @@ Git version: %{git_version} (branch: %{git_branch})
 [ "%{buildroot}" != "/" ] && rm -fr %{buildroot}
 
 %{__mkdir} -p %{buildroot}/%{__etcdir}
-%{__install} -pD -m 644 %{name}.cfg %{buildroot}/%{__etcdir}/%{name}.ini
+%{__install} -pD -m 644 %{name}.ini %{buildroot}/%{__etcdir}/%{name}.ini
 
 %{__mkdir} -p %{buildroot}/%{__logdir}
 
