@@ -13,6 +13,8 @@ env
 logs
 __pycache__
 
+/django/db/
+
 # New artifacts
 *~
 .vscode

@@ -6,4 +6,4 @@ build:
 
 .PHONY: start
 start: build
-	docker run -it --rm --link ${PROJECT_NAME} python manage.py runserver 0.0.0.0:8888
+	docker run -it --rm -v `pwd`:/usr/src  ${PROJECT_NAME} bash
