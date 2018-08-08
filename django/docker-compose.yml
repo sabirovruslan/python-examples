@@ -20,18 +20,24 @@ services:
       - 127.0.0.1:3308:3308
 
   otus_stackoverflow:
-    build: ./
+    build: .
     container_name: otus_stackoverflow
-#    restart: always
-    command: bash
+    restart: always
+#    command: cd ./app && ls -la &&
     volumes:
       - "./app:/usr/src/app"
+    environment:
+      DB_USERNAME: ${MYSQL_USERNAME}
+      DB_PASSWORD: ${MYSQL_PASSWORD}
+      DB_PORT: ${MYSQL_PORT}
+      DB_HOST: ${MYSQL_HOST}
+      DB_DATABASE: ${DB_DATABASE}
     networks:
       - shared
-    depends_on:
-      - otus-mysql
+#    depends_on:
+#      - otus-mysql
     ports:
-      - 127.0.0.1:6000:8000
+      - 8000:8000
 
 networks:
   shared:
