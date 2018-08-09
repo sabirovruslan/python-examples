@@ -2,9 +2,9 @@ version: '3.3'
 
 services:
 
-  otus-mysql:
-    image: mysql
-    container_name: otus-mysql
+  otus_mysql:
+    image: mysql:5.7
+    container_name: otus_mysql
     command: mysqld --character-set-server=utf8 --collation-server=utf8_general_ci --max_allowed_packet=32M
     restart: always
     environment:
@@ -17,13 +17,12 @@ services:
     networks:
       - shared
     ports:
-      - 127.0.0.1:3308:3308
+      - 3308:3306
 
   otus_stackoverflow:
     build: .
     container_name: otus_stackoverflow
     restart: always
-#    command: cd ./app && ls -la &&
     volumes:
       - "./app:/usr/src/app"
     environment:
@@ -34,8 +33,8 @@ services:
       DB_DATABASE: ${DB_DATABASE}
     networks:
       - shared
-#    depends_on:
-#      - otus-mysql
+    depends_on:
+      - otus_mysql
     ports:
       - 8000:8000
 
