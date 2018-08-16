@@ -24,7 +24,7 @@ services:
     container_name: otus_stackoverflow
     restart: always
     volumes:
-      - "./app:/usr/src/app"
+      - ".:/usr/src/app"
     environment:
       DB_USERNAME: ${MYSQL_USERNAME}
       DB_PASSWORD: ${MYSQL_PASSWORD}
