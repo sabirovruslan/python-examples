@@ -26,6 +26,7 @@ services:
     volumes:
       - ".:/usr/src/app"
     environment:
+      ENV: ${ENV}
       DB_USERNAME: ${MYSQL_USERNAME}
       DB_PASSWORD: ${MYSQL_PASSWORD}
       DB_PORT: ${MYSQL_PORT}
