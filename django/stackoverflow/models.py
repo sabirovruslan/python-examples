@@ -1,6 +1,6 @@
 from django.contrib.contenttypes.fields import GenericRelation
 from django.db.models import CharField, Model, TextField, ForeignKey, BooleanField, \
-    SmallIntegerField, ManyToManyField, DateTimeField, SET_NULL, CASCADE
+    SmallIntegerField, ManyToManyField, DateTimeField, SET_NULL, CASCADE, OneToOneField
 
 
 class Question(Model):
@@ -10,14 +10,15 @@ class Question(Model):
     rating = SmallIntegerField(default=0)
     user = ForeignKey('user.User', on_delete=SET_NULL, null=True, related_name='questions')
     tags = ManyToManyField('Tag')
+    correct_answer = OneToOneField('Answer', blank=True, null=True, on_delete=CASCADE, related_name="question_fk_1")
 
 
 class Answer(Model):
     text = TextField(null=False)
     create_date = DateTimeField(auto_now_add=True)
-    is_correct = BooleanField(null=False)
     rating = SmallIntegerField(default=0)
     user = ForeignKey('user.User', null=True, related_name='answers', on_delete=SET_NULL)
+    question = ForeignKey('Question', related_name="answers", on_delete=CASCADE)
 
 
 class Tag(Model):
