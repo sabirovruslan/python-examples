@@ -27,6 +27,7 @@ services:
       - ".:/usr/src/app"
     environment:
       ENV: ${ENV}
+      SECRET_KEY: ${SECRET_KEY}
       DB_USERNAME: ${MYSQL_USERNAME}
       DB_PASSWORD: ${MYSQL_PASSWORD}
       DB_PORT: ${MYSQL_PORT}
