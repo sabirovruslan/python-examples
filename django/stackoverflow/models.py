@@ -1,6 +1,15 @@
-from django.contrib.contenttypes.fields import GenericRelation
-from django.db.models import CharField, Model, TextField, ForeignKey, BooleanField, \
-    SmallIntegerField, ManyToManyField, DateTimeField, SET_NULL, CASCADE, OneToOneField
+from django.db.models import CharField, Model, TextField, ForeignKey, SmallIntegerField, ManyToManyField, DateTimeField, \
+    SET_NULL, CASCADE, OneToOneField, PositiveIntegerField
+
+
+class VoteType:
+    QUESTION = 'Q'
+    ANSWER = 'A'
+
+    VARIANTS = (
+        (QUESTION, 'Question'),
+        (ANSWER, 'Answer')
+    )
 
 
 class Question(Model):
@@ -26,13 +35,9 @@ class Tag(Model):
     questions = ManyToManyField('Question')
 
 
-class VoteQuestion(Model):
+class Vote(Model):
     value = SmallIntegerField(null=False)
     create_date = DateTimeField(auto_now_add=True)
-    question = ForeignKey('Question', null=False, related_name='questions', on_delete=CASCADE)
-
-
-class VoteAnswer(Model):
-    value = SmallIntegerField(null=False)
-    create_date = DateTimeField(auto_now_add=True)
-    answer = ForeignKey('Answer', null=False, related_name='answers', on_delete=CASCADE)
+    user = ForeignKey('user.User', null=True, related_name='votes', on_delete=SET_NULL)
+    object_id = PositiveIntegerField(null=False)
+    object_type = CharField(choices=VoteType.VARIANTS, null=False, max_length=1)
