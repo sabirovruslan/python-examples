@@ -1,0 +1,39 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h3>SIGN UP FORM</h3>
+<form method="post" action="/sign_up">
+  {% csrf_token %}
+  <div class="form-group">
+    <input type="email" name="email"
+           placeholder="Email"
+           class="form-control"
+           value="{{ form.email.value | default_if_none:"" }}">
+    {{ form.email.errors }}
+  </div>
+  <div class="form-group">
+    <input type="text" name="nickname"
+           placeholder="Nickname"
+           class="form-control"
+           value="{{ form.nickname.value | default_if_none:"" }}">
+    {{ form.nickname.errors }}
+  </div>
+  <div class="form-group">
+    <input type="password"
+           name="password"
+           placeholder="Password"
+           class="form-control"
+           value="{{ form.password.value | default_if_none:"" }}">
+    {{ form.password.errors }}
+  </div>
+  <div class="form-group">
+    <input type="password"
+           class="form-control"
+           name="password_confirmation"
+           placeholder="Password confirmation"
+           value="{{ form.password_confirmation.value | default_if_none:"" }}">
+    {{ form.password_confirmation.errors }}
+  </div>
+  <input type="submit" name="submit" value="Sign up!" class="btn btn-success">
+</form>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% load static %}
+<DOCTYPE! html>
+<html>
+<head>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css">
+    <script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.0/jquery-ui.min.js"></script>
+</head>
+
+<body>
+{% include 'head.html' %}
+<main role="main" class="container">
+    <div class="row">
+        <div class="col-md-6">
+            {% block content %}
+            {% endblock %}
+        </div>
+        <div class="col-md-3">
+            {% block right_side %}
+            {% include 'right_side_bar.html' %}
+            {% endblock %}
+        </div>
+    </div>
+</main>
+</body>
+</html>
