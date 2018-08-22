@@ -1,35 +1,42 @@
 {% load static %}
 
-<nav class="navbar navbar-expand-md navbar-dark bg-dark">
-  {% if user.is_authenticated%}
-    <div class="user-block">
-      <span class="login">
-        <a href="{% url 'edit_profile' %}">
-        {{ user.nickname }}
-        </a>
-      </span>
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <a class="navbar-brand" href="#">Stackoverflow</a>
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+            aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+    </button>
+
+    <div class="collapse navbar-collapse" id="navbarSupportedContent">
+        <form class="form-inline my-2 my-lg-0" action="/questions/search">
+            {% csrf_token %}
+            <select name="type" class="mr-sm-2">
+                <option value="1">Tags</option>
+                <option value="2">Questions</option>
+            </select>
+            <input class="form-control mr-sm-2" name="query" type="search" placeholder="Query" aria-label="Query">
+            <button class="btn btn-outline-success my-2 my-sm-0" type="submit">Search</button>
+        </form>
+        {% if user.is_authenticated%}
+            <div class="user-block">
+                <span class="login">
+                    <a href="{% url 'edit_profile' %}">
+                        {{ user.nickname }}
+                    </a>
+                </span>
+            </div>
+            <form method="post" action="/sign_out">
+                {% csrf_token %}
+                <div class="form-group row">
+                    <input type="submit" class="form-control btn btn-danger" value="Sign out"/>
+                </div>
+            </form>
+        {% else %}
+        <ul class="nav justify-content-end">
+            <li class="nav-item">
+                <a class="nav-link" href="{% url 'sign_up' %}">Sign up</a>
+            </li>
+        </ul>
+        {% endif %}
     </div>
-    <form method="post" action="/sign_out" >
-      {% csrf_token %}
-      <div class="form-group row">
-        <input type="submit" class="form-control btn btn-danger" value="Sign out" />
-      </div>
-    </form>
-  {% else %}
-      <a href="{% url 'sign_up' %}">Sign up</a>
-  {% endif %}
-  <div class="search">
-    <form method="post" class="form-inline" action="/questions/search">
-      {% csrf_token %}
-      <div class="form-group row">
-        <select name="type" class="mr-sm-2">
-          <option value="1">Tags</option>
-          <option value="2">Questions</option>
-        </select>
-        <input type="text" name="query" class="form-control" placeholder="Query" />
-        <input type="submit" class="btn btn-info" value="Search" />
-      </div>
-    </form>
-  </div>
 </nav>
-<h1>test</h1>
