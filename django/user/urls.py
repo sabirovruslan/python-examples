@@ -19,5 +19,5 @@ from .views import SignUpView, ProfileView
 
 urlpatterns = [
     url(r'^sign_up', SignUpView.as_view(), name='sign_up'),
-    url(r'^users/(?P<user_id>[A-Za-z0-9]*)', ProfileView.as_view(), name='profile')
+    url(r'^profile/(?P<user_id>[A-Za-z0-9]*)', ProfileView.as_view(), name='profile')
 ]

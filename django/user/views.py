@@ -10,7 +10,7 @@ class SignUpView(View):
 
     def get(self, request):
         form = SignUpForm()
-        return self._render_form(request, form)
+        return self._render(request, form)
 
     def post(self, request):
         form = SignUpForm(request.POST)
@@ -18,9 +18,9 @@ class SignUpView(View):
             login(request, form.object)
             return redirect('profile', user_id=form.object.id)
         else:
-            return self._render_form(request, form)
+            return self._render(request, form)
 
-    def _render_form(self, request, form):
+    def _render(self, request, form):
         return render(request, 'sign_up.html', {'form': form})
 
 
