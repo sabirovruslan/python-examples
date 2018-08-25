@@ -1,7 +1,8 @@
 from django.contrib.auth import login
-from django.shortcuts import redirect, render
+from django.shortcuts import redirect, render, get_object_or_404
 from django.views.generic.base import View
 
+from .models import User
 from .forms import SignUpForm
 
 
@@ -21,3 +22,10 @@ class SignUpView(View):
 
     def _render_form(self, request, form):
         return render(request, 'sign_up.html', {'form': form})
+
+
+class ProfileView(View):
+
+    def get(self, request, user_id):
+        user = get_object_or_404(User, pk=user_id)
+        return render(request, 'profile.html', {'user_data': user})
