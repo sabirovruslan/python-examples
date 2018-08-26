@@ -14,7 +14,7 @@ class QuestionForm(forms.Form):
         if data:
             self.tags = data.get('tags', None)
         if self.tags:
-            self.tags = [item for item in self.tags.split(',')]
+            self.tags = [item for item in self.tags.split(', ')]
         self.current_user = kwargs.pop('current_user', None)
         super(QuestionForm, self).__init__(data, **kwargs)
 

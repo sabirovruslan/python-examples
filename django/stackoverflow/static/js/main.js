@@ -1,11 +1,10 @@
 (function ($) {
-    function split(val) {
+    let split = function (val) {
         return val.split(/,\s*/);
-    }
-
-    function extractLast(term) {
+    };
+    let extractLast = function (term) {
         return split(term).pop();
-    }
+    };
 
     $('.js-tags').autocomplete({
         source: function (request, response) {
