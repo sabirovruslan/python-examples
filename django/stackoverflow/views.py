@@ -1,10 +1,10 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.http import JsonResponse
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic.base import View
 
-from .forms import QuestionForm
-from .models import Tag
+from .forms import QuestionForm, AnswerForm
+from .models import Tag, Question
 
 
 class QuestionCreateView(LoginRequiredMixin, View):
@@ -17,11 +17,22 @@ class QuestionCreateView(LoginRequiredMixin, View):
     def post(self, request):
         form = QuestionForm(request.POST, current_user=request.user)
         if form.submit():
-            return redirect('question/detail')
+            return redirect(f'question/{form.object.id}')
         return self._render(form, request)
 
     def _render(self, form, request):
         return render(request, 'question_create.html', {'form': form})
+
+
+class QuestionDetailView(View):
+
+    def get(self, request, question_id):
+        form = AnswerForm()
+        question = get_object_or_404(Question, pk=question_id)
+        return render(request, 'question_detail.html', {
+            'question': question,
+            'form': form
+        })
 
 
 class TagListView(View):

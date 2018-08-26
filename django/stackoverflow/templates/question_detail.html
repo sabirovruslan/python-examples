@@ -1,0 +1,35 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div class="question-detail">
+        <div class="title">
+            {{ question.title }}
+        </div>
+        <div class="text">
+            {{ question.text }}
+        </div>
+        <div class="answers">
+            <div class="list">
+                {% for answer in question.answers.all %}
+                    <div class="answer-item">
+                        <div class="answer-text">{{ answer.text }}</div>
+                    </div>
+                {% endfor %}
+            </div>
+            {% if user.is_authenticated %}
+                <div class="form">
+                    <form method="post" action="/questions/{{ question.id }}/answers">
+                        {% csrf_token %}
+                        <div class="gorm-group">
+            <textarea name="text" class="form-control">
+              {{ form.text.value | default_if_none:"" }}
+            </textarea>
+                            {{ form.text.errors }}
+                        </div>
+                        <input type="submit" value="Answer!" class="btn btn-success"/>
+                    </form>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+{% endblock %}
