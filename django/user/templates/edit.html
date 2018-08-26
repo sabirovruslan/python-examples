@@ -10,6 +10,9 @@
             {{ form.nickname.errors }}
         </div>
         <div class="form-group">
+            {% if user.avatar %}
+                <img src="{{ user.avatar.url }}" height="150" width="150" />
+            {% endif %}
             <input type="file" name="avatar">
             {{ form.avatar.errors }}
         </div>
