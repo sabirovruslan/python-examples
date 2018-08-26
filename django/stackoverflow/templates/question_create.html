@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+    <div class="edit_user">
+        <form method="post" action="{% url 'create_question' %}" autocomplete="off">
+            {% csrf_token %}
+            <div class="form-group">
+                <input type="text" name="title" class="form-control"
+                       value="{{ form.title.value | default_if_none:"" }}">
+                {{ form.title.errors }}
+            </div>
+            <div class="form-group">
+      <textarea name="text" class="form-control">
+        {{ form.text.value | default_if_none:"" }}
+      </textarea>
+                {{ form.text.errors }}
+            </div>
+            <div class="form-group ui-widget">
+                <input type="text" name="tags" class="tags form-control js-tags"/>
+                {{ form.tags.errors }}
+            </div>
+            <input type="submit" value="Save question" class="btn btn-success"/>
+        </form>
+    </div>
+    <script src="{% static "/js/main.js" %}" type="text/javascript"></script>
+{% endblock %}

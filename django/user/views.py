@@ -17,8 +17,7 @@ class SignUpView(View):
         if form.submit():
             login(request, form.object)
             return redirect('profile')
-        else:
-            return self._render(request, form)
+        return self._render(request, form)
 
     def _render(self, request, form):
         return render(request, 'sign_up.html', {'form': form})
@@ -42,8 +41,7 @@ class SignInView(View):
         if form.submit():
             login(request, form.object)
             return redirect('profile')
-        else:
-            return self._render(request, form)
+        return self._render(request, form)
 
     def _render(self, request, form):
         return render(request, 'sign_in.html', {'form': form})
@@ -70,8 +68,7 @@ class ProfileEditView(View):
         )
         if form.submit():
             return redirect('profile')
-        else:
-            return self._render(request, form)
+        return self._render(request, form)
 
     def _render(self, request, form):
         return render(request, 'edit.html', {'form': form})
