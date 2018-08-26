@@ -20,7 +20,7 @@
         {% if user.is_authenticated%}
             <ul class="nav justify-content-end">
                 <li class="nav-item">
-                    <a class="nav-link" href="/edit_profile" title="Edit profile">{{ user.nickname }}</a>
+                    <a class="nav-link" href="{% url 'edit_profile' %}" title="Edit profile">{{ user.nickname }}</a>
                 </li>
             </ul>
             <form class="form-inline my-2 my-lg-0" method="post" action="{% url 'sign_out' %}">

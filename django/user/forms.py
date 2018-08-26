@@ -69,3 +69,28 @@ class SignInForm(forms.Form):
 
         self.errors['user'] = 'Does not exist'
         return False
+
+
+class ProfileEditForm(forms.ModelForm):
+
+    class Meta:
+        model = User
+        fields = [
+            'nickname',
+            'avatar'
+        ]
+
+    nickname = CharField(max_length=150, strip=True, required=True)
+    avatar = forms.FileField(required=False)
+
+    def submit(self):
+        if not self.is_valid():
+            return False
+        try:
+            cleaned_data = self.cleaned_data
+            self.instance.nickname = cleaned_data.get('nickname')
+            self.instance.avatar = cleaned_data.get('avatar')
+            self.instance.save()
+            return True
+        except Exception:
+            return False

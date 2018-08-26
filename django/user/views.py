@@ -3,7 +3,7 @@ from django.shortcuts import redirect, render, get_object_or_404
 from django.views.generic.base import View
 
 from .models import User
-from .forms import SignUpForm, SignInForm
+from .forms import SignUpForm, SignInForm, ProfileEditForm
 
 
 class SignUpView(View):
@@ -56,3 +56,22 @@ class SignOutView(View):
             logout(request)
 
         return redirect('sign_in')
+
+
+class ProfileEditView(View):
+
+    def get(self, request):
+        form = ProfileEditForm(instance=request.user)
+        return self._render(request, form)
+
+    def post(self, request):
+        form = ProfileEditForm(
+            request.POST, request.FILES, instance=request.user
+        )
+        if form.submit():
+            return redirect('profile')
+        else:
+            return self._render(request, form)
+
+    def _render(self, request, form):
+        return render(request, 'edit.html', {'form': form})
