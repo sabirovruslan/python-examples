@@ -2,7 +2,7 @@
 
 {% block content %}
 <h3>SIGN UP FORM</h3>
-<form method="post" action="/sign_up" autocomplete="off">
+<form method="post" action="{% url 'sign_up' %}" autocomplete="off">
   {% csrf_token %}
   <div class="form-group">
     <input type="email" name="email"

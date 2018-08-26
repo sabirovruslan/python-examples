@@ -1,13 +1,15 @@
 from django import forms
+from django.contrib.auth import authenticate
 from django.db import transaction
 from django.db.utils import IntegrityError
+from django.forms import EmailField, CharField
 
 from .models import User
 
 
 class SignUpForm(forms.Form):
-    email = forms.EmailField(max_length=255, required=True)
-    nickname = forms.CharField(max_length=255, strip=True, required=True)
+    email = EmailField(max_length=255, required=True)
+    nickname = CharField(max_length=150, strip=True, required=True)
     password = forms.CharField(
         max_length=255, min_length=6, required=True
     )
@@ -43,3 +45,27 @@ class SignUpForm(forms.Form):
         except IntegrityError:
             self.add_error('email', 'Already present')
             return False
+
+
+class SignInForm(forms.Form):
+    email = EmailField(max_length=255, required=True)
+    password = CharField(
+        max_length=255, min_length=6, required=True
+    )
+
+    def submit(self):
+        if not self.is_valid():
+            return False
+
+        cleaned_data = self.cleaned_data
+        user = authenticate(
+            email=cleaned_data.get('email'),
+            password=cleaned_data.get('password')
+        )
+
+        if user:
+            self.object = user
+            return True
+
+        self.errors['user'] = 'Does not exist'
+        return False

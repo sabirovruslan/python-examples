@@ -10,3 +10,5 @@ class User(AbstractBaseUser):
     create_date = DateTimeField(auto_now_add=True)
 
     objects = UserManager()
+
+    USERNAME_FIELD = 'email'
