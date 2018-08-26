@@ -1,4 +1,4 @@
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.shortcuts import redirect, render, get_object_or_404
 from django.views.generic.base import View
 
@@ -16,7 +16,7 @@ class SignUpView(View):
         form = SignUpForm(request.POST)
         if form.submit():
             login(request, form.object)
-            return redirect('profile', user_id=form.object.id)
+            return redirect('profile')
         else:
             return self._render(request, form)
 
@@ -26,8 +26,8 @@ class SignUpView(View):
 
 class ProfileView(View):
 
-    def get(self, request, user_id):
-        user = get_object_or_404(User, pk=user_id)
+    def get(self, request):
+        user = get_object_or_404(User, pk=request.user.id)
         return render(request, 'profile.html', {'user_data': user})
 
 
@@ -41,9 +41,18 @@ class SignInView(View):
         form = SignInForm(request.POST)
         if form.submit():
             login(request, form.object)
-            return redirect('profile', user_id=form.object.id)
+            return redirect('profile')
         else:
             return self._render(request, form)
 
     def _render(self, request, form):
         return render(request, 'sign_in.html', {'form': form})
+
+
+class SignOutView(View):
+
+    def post(self, request):
+        if request.user.is_authenticated:
+            logout(request)
+
+        return redirect('sign_in')
