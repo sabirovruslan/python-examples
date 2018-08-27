@@ -2,9 +2,10 @@ from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
+from django.core.urlresolvers import reverse
 from django.views.generic.base import View
 
-from .forms import QuestionForm, AnswerForm
+from .forms import QuestionForm, AnswerForm, SearchForm
 from .models import Tag, Question
 
 
@@ -69,3 +70,23 @@ class AnswerCreateView(LoginRequiredMixin, View):
             'form': form
         })
 
+
+class SearchView(View):
+
+    def get(self, request):
+        page = request.GET.get('page', 1)
+        form = SearchForm(request.GET)
+        form.submit()
+        questions = form.objects
+        pagination = Paginator(questions, 20).page(page)
+        return render(request, 'question_list.html', {'questions': pagination})
+
+    def post(self, request):
+        form = SearchForm(request.POST)
+        form.submit()
+        cleaned_data = form.cleaned_data
+        return redirect(
+            reverse('questions_search') + '?type={}&query={}'.format(
+                cleaned_data.get('type'), cleaned_data.get('query')
+            )
+        )

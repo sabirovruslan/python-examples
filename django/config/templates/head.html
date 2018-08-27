@@ -8,7 +8,7 @@
     </button>
 
     <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <form class="form-inline my-2 my-lg-0" action="/questions/search">
+        <form class="form-inline my-2 my-lg-0" action="{% url 'question_search' %}">
             {% csrf_token %}
             <select name="type" class="mr-sm-2">
                 <option value="1">Tags</option>

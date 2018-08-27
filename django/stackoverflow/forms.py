@@ -1,5 +1,6 @@
 from django import forms
 from django.db import transaction
+from django.db.models import Q
 
 from .models import Question, Tag, Answer
 
@@ -84,3 +85,40 @@ class AnswerForm(forms.Form):
                 return True
         except Exception:
             return False
+
+
+class SearchForm(forms.Form):
+    TAGS = 1
+    QUESTIONS = 2
+    AVAILABLE_MODELS = [TAGS, QUESTIONS]
+
+    type = forms.IntegerField(required=True)
+    query = forms.CharField(required=True, max_length=255)
+
+    def __init__(self, data, **kwargs):
+        super(SearchForm, self).__init__(data, **kwargs)
+        self.objects = []
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        if cleaned_data.get('type') not in self.AVAILABLE_MODELS:
+            raise forms.ValidationError('these type does not present')
+        return cleaned_data
+
+    def submit(self):
+        if not self.is_valid():
+            return False
+
+        cleaned_data = self.cleaned_data
+        if cleaned_data.get('type') == self.TAGS:
+            try:
+                tag = Tag.objects.get(name=cleaned_data.get('query'))
+                self.objects = tag.question_set.all()
+            except Exception:
+                self.objects = []
+        elif cleaned_data.get('type') == self.QUESTIONS:
+            query = self.cleaned_data.get('query')
+            self.objects = Question.objects.filter(
+                Q(title__contains=query) | Q(text__contains=query)
+            )
+        return True
