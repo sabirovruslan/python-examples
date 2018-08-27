@@ -8,12 +8,22 @@
         <div class="text">
             {{ question.text }}
         </div>
+        <div class="tags">
+            Tags:
+            {% for tag in question.tags.all %}
+                <div class="answer-item">
+                    <div class="tag-text">{{ tag.name }}</div>
+                </div>
+            {% endfor %}
+        </div>
         <div class="answers">
+            answers
             <div class="list">
                 {% for answer in question.answers.all %}
                     <div class="answer-item">
                         <div class="answer-text">{{ answer.text }}</div>
                     </div>
+                    <hr>
                 {% endfor %}
             </div>
             {% if user.is_authenticated %}
