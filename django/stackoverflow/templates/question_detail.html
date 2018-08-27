@@ -18,12 +18,10 @@
             </div>
             {% if user.is_authenticated %}
                 <div class="form">
-                    <form method="post" action="/questions/{{ question.id }}/answers">
+                    <form method="post" action="/question/{{ question.id }}/answers">
                         {% csrf_token %}
                         <div class="gorm-group">
-            <textarea name="text" class="form-control">
-              {{ form.text.value | default_if_none:"" }}
-            </textarea>
+                        <textarea name="text" class="form-control">{{ form.text.value | default_if_none:"" }}</textarea>
                             {{ form.text.errors }}
                         </div>
                         <input type="submit" value="Answer!" class="btn btn-success"/>

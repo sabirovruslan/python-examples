@@ -17,7 +17,7 @@ class QuestionCreateView(LoginRequiredMixin, View):
     def post(self, request):
         form = QuestionForm(request.POST, current_user=request.user)
         if form.submit():
-            return redirect(f'question/{form.object.id}')
+            return redirect('question_detail', question_id=form.object.id)
         return self._render(form, request)
 
     def _render(self, form, request):
@@ -41,3 +41,21 @@ class TagListView(View):
         term = request.GET.get('term', '')
         tags = Tag.objects.filter(name__contains=term)
         return JsonResponse({'tags': [tag.name for tag in tags]})
+
+
+class AnswerCreateView(LoginRequiredMixin, View):
+
+    login_url = '/sign_in'
+
+    def post(self, request, question_id=None):
+        question = get_object_or_404(Question, pk=question_id)
+        form = AnswerForm(
+            request.POST, current_user=request.user, question=question
+        )
+        if form.submit():
+            return redirect('question_detail', question_id=question.id)
+        return render(request, 'question_detail.html', {
+            'question': question,
+            'form': form
+        })
+

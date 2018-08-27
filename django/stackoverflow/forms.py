@@ -78,10 +78,8 @@ class AnswerForm(forms.Form):
 
         try:
             with transaction.atomic():
-                params = {}
-                params['text'] = self.cleaned_data['text']
-                params['user_id'] = self.cleaned_data['user_id']
-                params['question_id'] = self.cleaned_data['question_id']
+                params = {'text': self.cleaned_data['text'], 'user_id': self.cleaned_data['user_id'],
+                          'question_id': self.cleaned_data['question_id']}
                 self.object = Answer.objects.create(**params)
                 return True
         except Exception:
