@@ -1,10 +1,20 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.paginator import Paginator
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
 from django.views.generic.base import View
 
 from .forms import QuestionForm, AnswerForm
 from .models import Tag, Question
+
+
+class QuestionListView(View):
+
+    def get(self, request):
+        page = request.GET.get('page')
+        questions = Question.objects.prefetch_related('tags')
+        pagination = Paginator(questions, 20).page(page or 1)
+        return render(request, 'question_list.html', {'questions': pagination})
 
 
 class QuestionCreateView(LoginRequiredMixin, View):

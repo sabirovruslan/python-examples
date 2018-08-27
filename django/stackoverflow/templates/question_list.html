@@ -1,0 +1,31 @@
+{% extends 'base.html' %}
+
+{% block content %}
+    <div>QUESTIONS LIST</div>
+    {% for question in questions %}
+        <div class="question-item">
+            <div class="title">
+                <a href="{% url 'question_detail' question_id=question.id %}">
+                    {{ question.title }}
+                </a>
+            </div>
+        </div>
+    {% endfor %}
+    <div class="pagination">
+          <span class="step-links">
+              {% if questions.has_previous %}
+                  <a href="?page=1">&laquo; first</a>
+                  <a href="?page={{ questions.previous_page_number }}">previous</a>
+              {% endif %}
+
+              <span class="current">
+                  Page {{ questions.number }} of {{ questions.paginator.num_pages }}.
+              </span>
+
+              {% if questions.has_next %}
+                  <a href="?page={{ questions.next_page_number }}">next</a>
+                  <a href="?page={{ questions.paginator.num_pages }}">last &raquo;</a>
+              {% endif %}
+          </span>
+    </div>
+{% endblock %}
