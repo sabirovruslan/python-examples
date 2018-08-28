@@ -21,6 +21,9 @@ class Question(Model):
     tags = ManyToManyField('Tag')
     correct_answer = OneToOneField('Answer', blank=True, null=True, on_delete=CASCADE, related_name="question_fk_1")
 
+    def get_type(self):
+        return VoteType.QUESTION
+
 
 class Answer(Model):
     text = TextField(null=False)
@@ -28,6 +31,9 @@ class Answer(Model):
     rating = SmallIntegerField(default=0)
     user = ForeignKey('user.User', null=True, related_name='answers', on_delete=SET_NULL)
     question = ForeignKey('Question', related_name="answers", on_delete=CASCADE)
+
+    def get_type(self):
+        return VoteType.ANSWER
 
 
 class Tag(Model):

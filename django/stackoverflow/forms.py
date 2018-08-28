@@ -2,7 +2,7 @@ from django import forms
 from django.db import transaction
 from django.db.models import Q
 
-from .models import Question, Tag, Answer
+from .models import Question, Tag, Answer, Vote
 
 
 class QuestionForm(forms.Form):
@@ -122,3 +122,65 @@ class SearchForm(forms.Form):
                 Q(title__contains=query) | Q(text__contains=query)
             )
         return True
+
+
+class VoteForm(forms.Form):
+    value = forms.IntegerField(required=True)
+    object_type = forms.CharField(required=False)
+    object_id = forms.IntegerField(required=False)
+
+    UP = 1
+    DEFAULT = 0
+    DOWN = -1
+
+    def __init__(self, data=None, **kwargs):
+        self.current_user = kwargs.pop('current_user', None)
+        self.obj = kwargs.pop('obj', None)
+        super(VoteForm, self).__init__(data, **kwargs)
+
+    def clean(self):
+        cleaned_data = self.cleaned_data
+        if not self.current_user:
+            raise forms.ValidationError('user_id is not present')
+        if not self.obj:
+            raise forms.ValidationError('object is not present')
+
+        cleaned_data['user_id'] = self.current_user.id
+        cleaned_data['obj'] = self.obj.id
+        cleaned_data['object_type'] = self.obj.get_type()
+        return cleaned_data
+
+    def submit(self):
+        if not self.is_valid():
+            return False
+
+        try:
+            with transaction.atomic():
+                cleaned_data = self.cleaned_data
+                try:
+                    vote = Vote.objects.get(
+                        object_id=self.obj.id,
+                        object_type=cleaned_data.get('object_type')
+                    )
+                except Exception:
+                    vote = None
+
+                if not vote:
+                    vote = (
+                        Vote.objects.create(
+                            value=cleaned_data.get('value'),
+                            object_id=self.obj.id,
+                            object_type=cleaned_data.get('object_type'))
+                    )
+                    self.return_value = vote.value
+                else:
+                    if vote.value != cleaned_data.get('value'):
+                        vote.delete()
+                        self.return_value = self.DEFAULT
+                    else:
+                        self.return_value = vote.value
+                        vote.save()
+
+                return True
+        except Exception as e:
+            return False

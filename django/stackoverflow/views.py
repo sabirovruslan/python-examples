@@ -1,12 +1,12 @@
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.paginator import Paginator
+from django.core.urlresolvers import reverse
 from django.http import JsonResponse
 from django.shortcuts import render, redirect, get_object_or_404
-from django.core.urlresolvers import reverse
 from django.views.generic.base import View
 
-from .forms import QuestionForm, AnswerForm, SearchForm
-from .models import Tag, Question
+from .forms import QuestionForm, AnswerForm, SearchForm, VoteForm
+from .models import Tag, Question, Answer
 
 
 class QuestionListView(View):
@@ -90,3 +90,23 @@ class SearchView(View):
                 cleaned_data.get('type'), cleaned_data.get('query')
             )
         )
+
+
+class VoteAnswerView(LoginRequiredMixin, View):
+
+    def post(self, request, answer_id=None):
+        answer = get_object_or_404(Answer, pk=answer_id)
+        form = VoteForm(request.POST, current_user=request.user, obj=answer.question)
+        if form.submit():
+            return JsonResponse({'value': form.return_value})
+        return JsonResponse({'errors': form.errors})
+
+
+class VoteQuestionView(LoginRequiredMixin, View):
+
+    def post(self, request, question_id=None):
+        question = get_object_or_404(Question, pk=question_id)
+        form = VoteForm(request.POST, current_user=request.user, obj=question)
+        if form.submit():
+            return JsonResponse({'value': form.return_value})
+        return JsonResponse({'errors': form.errors})
