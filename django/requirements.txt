@@ -6,3 +6,4 @@ Pillow >= 5.2.0
 pyjwt==1.6.1
 djangorestframework
 djangorestframework-jwt
+django-rest-swagger

@@ -23,7 +23,8 @@ INSTALLED_APPS = [
     'config',
     'user',
     'stackoverflow',
-    'api'
+    'api',
+    'rest_framework_swagger'
 ]
 
 MIDDLEWARE = [
