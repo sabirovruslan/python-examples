@@ -9,5 +9,5 @@ urlpatterns = [
     url(r'^trending/$', TrendingList.as_view(), name='trending'),
     url(r'^search/?$', SearchList.as_view(), name='search'),
     url(r'^questions/(?P<pk>[\d]+)/answers/$', AnswerList.as_view(), name='answers'),
-    url(r'^api-token-auth/$', obtain_jwt_token, name='api_token_auth'),
+    url(r'^get-token-auth/$', obtain_jwt_token, name='get_token_auth'),
 ]

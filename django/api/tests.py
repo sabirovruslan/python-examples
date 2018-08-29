@@ -203,7 +203,7 @@ class ObtainJwtTokenTest(TestCase):
 
     def test_api_token_generate(self):
         response = self.client.post(
-            reverse('api:api_token_auth'),
+            reverse('api:get_token_auth'),
             data=json.dumps({'nickname': 'test', 'password': 'top_secret'}),
             content_type='application/json'
         )
@@ -212,7 +212,7 @@ class ObtainJwtTokenTest(TestCase):
 
     def test_not_existing_user_api_token_generate_failure(self):
         response = self.client.post(
-            reverse('api:api_token_auth'),
+            reverse('api:get_token_auth'),
             data=json.dumps({'nickname': 'test', 'password': 'incorrect_secret'}),
             content_type='application/json'
         )
