@@ -22,7 +22,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'config',
     'user',
-    'stackoverflow'
+    'stackoverflow',
+    'api'
 ]
 
 MIDDLEWARE = [
@@ -102,3 +103,6 @@ STATICFILES_DIRS = [
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+QUESTIONS_PER_PAGE = 20
+ANSWERS_PER_PAGE = 20

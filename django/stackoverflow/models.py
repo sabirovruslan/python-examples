@@ -1,5 +1,5 @@
 from django.db.models import CharField, Model, TextField, ForeignKey, SmallIntegerField, ManyToManyField, DateTimeField, \
-    SET_NULL, CASCADE, OneToOneField, PositiveIntegerField
+    SET_NULL, CASCADE, OneToOneField, PositiveIntegerField, Manager
 
 
 class VoteType:
@@ -12,6 +12,19 @@ class VoteType:
     )
 
 
+class QuestionManager(Manager):
+    def new(self):
+        return self.all().order_by('-create_date')
+
+    def popular(self):
+        return self.all().order_by('-rating', '-create_date')
+
+
+class AnswerManager(Manager):
+    def popular(self):
+        return self.all().order_by('-rating', '-create_date')
+
+
 class Question(Model):
     title = CharField(max_length=255, null=False)
     text = TextField(null=False)
@@ -19,10 +32,13 @@ class Question(Model):
     rating = SmallIntegerField(default=0)
     user = ForeignKey('user.User', on_delete=SET_NULL, null=True, related_name='questions')
     tags = ManyToManyField('Tag')
-    correct_answer = OneToOneField('Answer', blank=True, null=True, on_delete=CASCADE, related_name="question_fk_1")
+    correct_answer = OneToOneField('Answer', blank=True, null=True, on_delete=CASCADE, related_name="correct_answer")
+
+    objects = QuestionManager()
 
     def get_type(self):
         return VoteType.QUESTION
+
 
 
 class Answer(Model):
@@ -31,6 +47,8 @@ class Answer(Model):
     rating = SmallIntegerField(default=0)
     user = ForeignKey('user.User', null=True, related_name='answers', on_delete=SET_NULL)
     question = ForeignKey('Question', related_name="answers", on_delete=CASCADE)
+
+    objects = AnswerManager()
 
     def get_type(self):
         return VoteType.ANSWER

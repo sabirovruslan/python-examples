@@ -3,5 +3,6 @@ gunicorn==19.7.1
 psycopg2
 mysqlclient
 Pillow >= 5.2.0
-djangorestframework==3.8.2
 pyjwt==1.6.1
+djangorestframework
+djangorestframework-jwt
