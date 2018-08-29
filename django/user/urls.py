@@ -1,6 +1,8 @@
 from django.conf.urls import url
 from django.contrib.auth.decorators import login_required
+from rest_framework.routers import DefaultRouter
 
+from .api import SignInViewSet, SignUpViewSet
 from .views import SignUpView, ProfileView, SignInView, SignOutView, ProfileEditView
 
 urlpatterns = [
@@ -10,3 +12,8 @@ urlpatterns = [
     url(r'^profile/edit', login_required(ProfileEditView.as_view()), name='edit_profile'),
     url(r'^profile', ProfileView.as_view(), name='profile'),
 ]
+
+router = DefaultRouter()
+
+router.register('v1/sign_in', SignInViewSet, base_name='v1_sign_in')
+router.register('v1/sign_up', SignUpViewSet, base_name='v1_sign_up')
