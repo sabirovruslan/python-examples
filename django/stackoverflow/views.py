@@ -119,9 +119,7 @@ class QuestionView(PaginationMixin, View):
         self.question = get_object_or_404(Question, pk=pk)
         if self.form.is_valid():
             answer = self.form.save(commit=False)
-            answer.question = self.question
-            answer.user = request.user
-            answer.save()
+            answer.complete_and_save(question=self.question, user=request.user)
             new_answer_email_notify(request, self.question, answer)
             return redirect(self.get_url())
         return self.do_response(request)
@@ -149,8 +147,7 @@ class AskView(View):
         if form.is_valid():
             question = form.save(commit=False)
             tags = form.cleaned_data['tags']
-            question.user = request.user
-            question.save(tags=tags)
+            question.complete_and_save(tags=tags, user=request.user)
             return redirect(question.get_url())
         return render(request, self.template, {'form': form})
 
