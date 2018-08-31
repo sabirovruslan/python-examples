@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Search result{% endblock title %}
+{% block content %}
+    {% load stackoverflow_extras %}
+    <h1 class="question-header">{% if request.GET.q|startswith:'tag:' %}Tag{% else %}Search{% endif %} result</h1>
+    <div class="question-list">
+        {% if questions %}
+            {% for question in questions %}
+                {% include 'snippets/question_list_item.html' %}
+            {% endfor %}
+        {% else %}
+            {% if request.GET.q|startswith:'tag:' %}
+                <h2 class="missing">Couldn't find any question by tag</h2>
+            {% else %}
+                <h2 class="missing">Couldn't find any matching `{{ request.GET.q }}`</h2>
+            {% endif %}
+        {% endif %}
+    </div>
+    {% include 'snippets/pagination.html' %}
+{% endblock content %}

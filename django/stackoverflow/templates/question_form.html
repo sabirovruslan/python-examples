@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}Ask a question{% endblock title %}
+{% block css %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/jquery.tagsinput.css' %}"/>
+{% endblock css %}
+{% block js %}
+    <script type="text/javascript" src="{% static 'js/jquery.tagsinput.js' %}"></script>
+    <script type="text/javascript">
+        (function () {
+            $('input[name="tags"]').tagsInput();
+        })();
+    </script>
+{% endblock js %}
+{% block content %}
+    <h1 class="text-center">Ask a question</h1>
+    <form class="form-base" method="post" action="{% url 'stackoverflow:ask' %}">
+        {% include 'snippets/form.html' %}
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Ask!</button>
+        </div>
+    </form>
+{% endblock content %}

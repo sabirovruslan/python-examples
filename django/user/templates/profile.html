@@ -1,13 +1,7 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
+{% block title %}User Profile{% endblock title %}
 {% block content %}
-<h3>Profile page</h3>
-{% if user.is_authenticated %}
-  <h2>User is authenticated</h2>
-{% endif %}
-{% if user_data.avatar %}
-  <img src="{{ user_data.avatar.url }}" height="150" width="150" />
-{% endif %}
-<p>Email: {{ user_data.email }}</p>
-<p>Login: {{ user_data.nickname }}</p>
-{% endblock %}
+    <h1 class="text-center">User Profile</h1>
+    <p class="profile-login">Login - {{ user.username }}</p>
+    <img src="{{ user.get_avatar_url }}" alt="" class="profile img-rounded"/>
+{% endblock content %}

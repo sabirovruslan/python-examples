@@ -1,0 +1,13 @@
+{% if paginator.num_pages > 1 %}
+    <nav class="pagination-area" aria-label="Page navigation">
+        <ul class="pagination">
+            {% for p in paginator.page_range %}
+                {% if p == page.number %}
+                    <li class="active"><span>{{ p }}</span></li>
+                {% else %}
+                    <li><a href="{{ paginator.url }}{{ p }}">{{ p }}</a></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+{% endif %}

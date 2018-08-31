@@ -50,7 +50,6 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
-                'config.utils.processors.trending_questions'
             ],
         },
     },
@@ -106,4 +105,7 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 QUESTIONS_PER_PAGE = 20
+TRENDING_QUESTIONS_LIMIT = 20
 ANSWERS_PER_PAGE = 20
+TAGS_LIMIT = 3
+PAGE_INDEX = 'stackoverflow:index'
