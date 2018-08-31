@@ -1,43 +1,89 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
+{% block title %}{{ question }}{% endblock title %}
 {% block content %}
-    <div class="question-detail">
-        <div class="title">
-            {{ question.title }}
-        </div>
-        <div class="text">
-            {{ question.text }}
-        </div>
-        <div class="tags">
-            Tags:
-            {% for tag in question.tags.all %}
-                <div class="answer-item">
-                    <div class="tag-text">{{ tag.name }}</div>
-                </div>
-            {% endfor %}
-        </div>
-        <div class="answers">
-            answers
-            <div class="list">
-                {% for answer in question.answers.all %}
-                    <div class="answer-item">
-                        <div class="answer-text">{{ answer.text }}</div>
-                    </div>
-                    <hr>
-                {% endfor %}
+    <h1 class="question-header">{{ question.title }}</h1>
+    <div class="row content-block">
+        <div class="col-xs-3 col-sm-2 col-lg-1">
+            <div class="rating-control">
+                <a href="{{ question.get_vote_url }}" class="vote-up vote glyphicon glyphicon-thumbs-up"></a>
+                <p class="rating">{{ question.rating }}</p>
+                <a href="{{ question.get_vote_url }}" class="vote-down vote glyphicon glyphicon-thumbs-down"></a>
             </div>
-            {% if user.is_authenticated %}
-                <div class="form">
-                    <form method="post" action="/question/{{ question.id }}/answers">
-                        {% csrf_token %}
-                        <div class="gorm-group">
-                        <textarea name="text" class="form-control">{{ form.text.value | default_if_none:"" }}</textarea>
-                            {{ form.text.errors }}
-                        </div>
-                        <input type="submit" value="Answer!" class="btn btn-success"/>
-                    </form>
+        </div>
+        <div class="col-xs-9 col-sm-10 col-lg-11">
+            <p>{{ question.text }}</p>
+            <div class="additional">
+                {% if question.tags.exists %}
+                    <div class="tag-list">
+                        {% for tag in question.tags.all %}
+                            <a href="{{ tag.get_url }}" class="label label-primary">{{ tag }}</a>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+                <div class="user-info">
+                    <div class="user-avatar">
+                        <img src="{{ question.author.get_avatar_url }}" alt=""/>
+                    </div>
+                    <p class="text-center">
+                        <a href="{{ question.author.get_url }}">
+                            {{ question.author.username|truncatechars:15 }}
+                        </a>
+                    </p>
                 </div>
-            {% endif %}
+            </div>
         </div>
     </div>
-{% endblock %}
+    <div class="answer-list">
+        {% for answer in answers %}
+            <div class="row content-block">
+                <div class="col-xs-3 col-sm-2 col-lg-1">
+                    <div class="rating-control answer">
+                        <a href="{{ answer.get_vote_url }}" class="vote-up vote glyphicon glyphicon-thumbs-up"></a>
+                        <p class="rating">{{ answer.rating }}</p>
+                        <a href="{{ answer.get_vote_url }}" class="vote-down vote glyphicon glyphicon-thumbs-down"></a>
+                        {% if question.author == user %}
+                            <a href="{{ answer.get_mark_url }}"
+                               class="mark {% if question.has_answer and question.correct_answer == answer %} active {% endif %} glyphicon glyphicon-ok"></a>
+                        {% elif question.has_answer and question.correct_answer == answer %}
+                            <span class="mark glyphicon glyphicon-ok"></span>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-xs-9 col-sm-10 col-lg-11">
+                    <p>{{ answer.text }}</p>
+                    <div class="additional">
+                        <div class="user-info">
+                            <div class="user-avatar">
+                                <img src="{{ answer.author.get_avatar_url }}" alt=""/>
+                            </div>
+                            <p class="text-center">
+                                <a href="{{ answer.author.get_url }}">
+                                    {{ answer.author.username|truncatechars:15 }}
+                                </a>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% include 'snippets/pagination.html' %}
+    {% if user.is_authenticated %}
+        <div class="answer-form">
+            {% if form.errors %}
+                <div class="form-errors">
+                    {% for key, error in form.errors.items %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+            {% endif %}
+            <form class="form-base" method="post" action="{{ question.get_url }}">
+                <input type="hidden" name="question_id" value="{{ question.pk }}">
+                {% include 'snippets/form.html' %}
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary">Send</button>
+                </div>
+            </form>
+        </div>
+    {% endif %}
+{% endblock content %}

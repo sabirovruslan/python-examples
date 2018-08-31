@@ -1,22 +1,17 @@
-{% extends 'base.html' %}
-
+{% extends "base.html" %}
+{% block title %}User Settings{% endblock title %}
 {% block content %}
-<div class="edit_user">
-    <div>Email: {{ user.email }}</div>
-    <form method="post" action="{% url 'edit_profile' %}" enctype="multipart/form-data">
-        {% csrf_token %}
+    <h1 class="text-center">Settings</h1>
+    <form class="form-base" method="post" action="{% url 'user:settings' %}" enctype="multipart/form-data">
+        <p class="profile-login">Login - {{ user.username }}</p>
+        {% if messages %}
+            {% for message in messages %}
+                <p class="text-success">{{ message }}</p>
+            {% endfor %}
+        {% endif %}
+        {% include 'snippets/form.html' %}
         <div class="form-group">
-            <input type="text" name="nickname" class="form-control" value="{{ form.nickname.value | default_if_none:'' }}">
-            {{ form.nickname.errors }}
+            <button type="submit" class="btn btn-primary">Save</button>
         </div>
-        <div class="form-group">
-            {% if user.avatar %}
-                <img src="{{ user.avatar.url }}" height="150" width="150" />
-            {% endif %}
-            <input type="file" name="avatar">
-            {{ form.avatar.errors }}
-        </div>
-        <input type="submit" value="Update user" class="btn btn-success"/>
     </form>
-</div>
-{% endblock %}
+{% endblock content %}

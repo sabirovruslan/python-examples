@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Sing Up{% endblock title %}
+{% block content %}
+    <h1 class="text-center">Sing up to continue with Hasker</h1>
+    <form class="form-base" method="post" action="{% url 'user:singup' %}" enctype="multipart/form-data">
+        {% include 'snippets/form.html' %}
+        <div class="form-group">
+            <button type="submit" class="btn btn-primary">Sing Up</button>
+        </div>
+    </form>
+{% endblock content %}

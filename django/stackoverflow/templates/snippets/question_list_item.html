@@ -1,0 +1,27 @@
+{% load stackoverflow_extras %}
+<div class="row question-content-block">
+    <div class="col-xs-2">
+        <div>{{ question.rating }}</div>
+        <div>Votes</div>
+    </div>
+    <div class="col-xs-2">
+        <div>{{ question.answer_set.count }}</div>
+        <div>Answers</div>
+    </div>
+    <div class="col-xs-5">
+        <div class="question-title">
+            <a href="{{ question.get_url }}">{{ question.title|truncatechars:150|title }}</a>
+        </div>
+        {% if question.tags.exists %}
+            <div class="tag-list">
+                {% for tag in question.tags.all %}
+                    <a href="{{ tag.get_url }}" class="label label-primary">{{ tag }}</a>
+                {% endfor %}
+            </div>
+        {% endif %}
+    </div>
+    <div class="col-xs-3">
+        <div><a href="{{ question.author.get_url }}">{{ question.author.username }}</a></div>
+        <div>asked {{ question.create_date|get_human_date }}</div>
+    </div>
+</div>

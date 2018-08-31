@@ -1,0 +1,6 @@
+{% for question in questions %}
+    <div class="trend-item">
+        <span class="label label-primary">{{ question.rating }}</span>
+        <a href="{{ question.get_url }}" class="trent-link">{{ question.title|truncatechars:45 }}</a>
+    </div>
+{% endfor %}

@@ -1,96 +1,82 @@
-from django import forms
 from django.contrib.auth import authenticate
-from django.db import transaction
-from django.db.utils import IntegrityError
-from django.forms import EmailField, CharField
+from django.contrib.auth.forms import UserCreationForm
+from django import forms
+from django.forms import EmailField
 
 from .models import User
+from .widgets import ClearableImageInput
+from django.utils.translation import ugettext, ugettext_lazy as _
 
 
-class SignUpForm(forms.Form):
-    email = EmailField(max_length=255, required=True)
-    nickname = CharField(max_length=150, strip=True, required=True)
-    password = forms.CharField(
-        max_length=255, min_length=6, required=True
-    )
-    password_confirmation = forms.CharField(
-        max_length=255, min_length=6, required=True
-    )
-
-    def clean(self):
-        cleaned_data = super(SignUpForm, self).clean()
-        password = cleaned_data.get('password')
-        password_confirmation = cleaned_data.get('password_confirmation')
-        if password and password_confirmation:
-            if password != password_confirmation:
-                self.add_error(
-                    'password_confirmation',
-                    'Does not match password')
-                raise forms.ValidationError("Does not match password")
-        return cleaned_data
-
-    def submit(self):
-        if not self.is_valid():
-            return False
-        try:
-            with transaction.atomic():
-                cleaned_data = self.cleaned_data
-                self.object = User(
-                    email=cleaned_data.get('email'),
-                    nickname=cleaned_data.get('nickname')
-                )
-                self.object.set_password(cleaned_data.get('password'))
-                self.object.save()
-                return True
-        except IntegrityError:
-            self.add_error('email', 'Already present')
-            return False
-
-
-class SignInForm(forms.Form):
-    email = EmailField(max_length=255, required=True)
-    password = CharField(
-        max_length=255, min_length=6, required=True
-    )
-
-    def submit(self):
-        if not self.is_valid():
-            return False
-
-        cleaned_data = self.cleaned_data
-        user = authenticate(
-            email=cleaned_data.get('email'),
-            password=cleaned_data.get('password')
-        )
-
-        if user:
-            self.object = user
-            return True
-
-        self.errors['user'] = 'Does not exist'
-        return False
-
-
-class ProfileEditForm(forms.ModelForm):
-
+class UserSingUpForm(UserCreationForm):
     class Meta:
         model = User
-        fields = [
-            'nickname',
-            'avatar'
-        ]
+        fields = ('nickname', 'email', 'password1', 'password2', 'avatar',)
 
-    nickname = CharField(max_length=150, strip=True, required=True)
-    avatar = forms.FileField(required=False)
 
-    def submit(self):
-        if not self.is_valid():
-            return False
-        try:
-            cleaned_data = self.cleaned_data
-            self.instance.nickname = cleaned_data.get('nickname')
-            self.instance.avatar = cleaned_data.get('avatar')
-            self.instance.save()
-            return True
-        except Exception:
-            return False
+class UserSettingsForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ('nickname', 'avatar',)
+
+    def __init__(self, *args, **kwargs):
+        super(UserSettingsForm, self).__init__(*args, **kwargs)
+        self.fields['avatar'].widget = ClearableImageInput()
+
+
+class AuthenticationByEmailForm(forms.Form):
+    email = EmailField(max_length=255, required=True)
+    password = forms.CharField(
+        label=_("Password"),
+        strip=False,
+        widget=forms.PasswordInput,
+    )
+
+    error_messages = {
+        'invalid_login': _(
+            "Please enter a correct %(email)s and password. Note that both "
+            "fields may be case-sensitive."
+        ),
+        'inactive': _("This account is inactive."),
+    }
+
+    def __init__(self, request=None, *args, **kwargs):
+        self.request = request
+        self.user_cache = None
+        super(AuthenticationByEmailForm, self).__init__(*args, **kwargs)
+
+        self.username_field = User._meta.get_field(User.USERNAME_FIELD)
+        if self.fields['email'].label is None:
+            self.fields['email'].label = 'Email'
+
+    def clean(self):
+        email = self.cleaned_data.get('email')
+        password = self.cleaned_data.get('password')
+
+        if email is not None and password:
+            self.user_cache = authenticate(self.request, email=email, password=password)
+            if self.user_cache is None:
+                raise forms.ValidationError(
+                    self.error_messages['invalid_login'],
+                    code='invalid_login',
+                    params={'email': self.username_field.verbose_name},
+                )
+            else:
+                self.confirm_login_allowed(self.user_cache)
+
+        return self.cleaned_data
+
+    def confirm_login_allowed(self, user):
+        if not user.is_active:
+            raise forms.ValidationError(
+                self.error_messages['inactive'],
+                code='inactive',
+            )
+
+    def get_user_id(self):
+        if self.user_cache:
+            return self.user_cache.id
+        return None
+
+    def get_user(self):
+        return self.user_cache

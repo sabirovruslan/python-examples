@@ -16,7 +16,7 @@ class QuestionSerializer(serializers.ModelSerializer):
 class AnswerSerializer(serializers.ModelSerializer):
     user = serializers.ReadOnlyField(source='user.nickname')
     rating = serializers.IntegerField(read_only=True)
-    pub_date = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S', read_only=True)
+    create_date = serializers.DateTimeField(format='%Y-%m-%dT%H:%M:%S', read_only=True)
 
     class Meta:
         model = Answer

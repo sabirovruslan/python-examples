@@ -1,74 +1,93 @@
+from django.conf import settings
 from django.contrib.auth import login, logout
-from django.shortcuts import redirect, render, get_object_or_404
-from django.views.generic.base import View
+from django.contrib.auth.decorators import login_required
+from django.db import transaction
+from django.shortcuts import render, redirect, get_object_or_404
+from django.utils.decorators import method_decorator
+from django.views import View
 
 from .models import User
-from .forms import SignUpForm, SignInForm, ProfileEditForm
+from .decorators import logout_required
+from .forms import UserSingUpForm, UserSettingsForm, AuthenticationByEmailForm
 
 
-class SignUpView(View):
+class SingUpView(View):
+    form_class = UserSingUpForm
+    template = 'sing_up.html'
 
+    @method_decorator(logout_required(settings.PAGE_INDEX))
     def get(self, request):
-        form = SignUpForm()
-        return self._render(request, form)
+        form = self.form_class(None)
+        return render(request, self.template, {'form': form})
 
+    @method_decorator(logout_required(settings.PAGE_INDEX))
+    @transaction.atomic
     def post(self, request):
-        form = SignUpForm(request.POST)
-        if form.submit():
-            login(request, form.object)
-            return redirect('profile')
-        return self._render(request, form)
+        form = self.form_class(request.POST, request.FILES)
+        if form.is_valid():
+            user = form.save()
+            login(request, user)
+            return redirect(settings.PAGE_INDEX)
+        return render(request, self.template, {'form': form})
 
-    def _render(self, request, form):
-        return render(request, 'sign_up.html', {'form': form})
+
+class LoginView(View):
+    form_class = AuthenticationByEmailForm
+    template = 'login.html'
+
+    @method_decorator(logout_required(settings.PAGE_INDEX))
+    def get(self, request):
+        form = self.form_class(None)
+        return render(request, self.template, {'form': form})
+
+    @method_decorator(logout_required(settings.PAGE_INDEX))
+    @transaction.atomic
+    def post(self, request):
+        form = self.form_class(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            if not request.POST.get('remember_me', None):
+                request.session.set_expiry(0)
+            login(request, user)
+            return redirect(settings.PAGE_INDEX)
+        return render(request, self.template, {'form': form})
+
+
+class LogoutView(View):
+    @method_decorator(login_required)
+    def post(self, request):
+        logout(request)
+        return redirect(settings.PAGE_INDEX)
+
+
+class SettingsView(View):
+    form_class = UserSettingsForm
+    template = 'edit.html'
+
+    @method_decorator(login_required)
+    def get(self, request):
+        user = request.user
+        form = self.form_class(instance=request.user)
+        return render(request, self.template, {'form': form, 'user': user})
+
+    @method_decorator(login_required)
+    @transaction.atomic
+    def post(self, request):
+        user = request.user
+        form = self.form_class(request.POST, request.FILES, instance=request.user)
+        if form.is_valid():
+            user.nickname = form.cleaned_data.get('nickname')
+            avatar = form.cleaned_data.get('avatar')
+            if avatar:
+                user.avatar = avatar
+            user.save()
+            return redirect('user:settings')
+        return render(request, self.template, {'form': form, 'user': user})
 
 
 class ProfileView(View):
+    template = 'profile.html'
 
-    def get(self, request):
-        user = get_object_or_404(User, pk=request.user.id)
-        return render(request, 'profile.html', {'user_data': user})
-
-
-class SignInView(View):
-
-    def get(self, request):
-        form = SignInForm()
-        return self._render(request, form)
-
-    def post(self, request):
-        form = SignInForm(request.POST)
-        if form.submit():
-            login(request, form.object)
-            return redirect('profile')
-        return self._render(request, form)
-
-    def _render(self, request, form):
-        return render(request, 'sign_in.html', {'form': form})
-
-
-class SignOutView(View):
-
-    def post(self, request):
-        if request.user.is_authenticated:
-            logout(request)
-
-        return redirect('sign_in')
-
-
-class ProfileEditView(View):
-
-    def get(self, request):
-        form = ProfileEditForm(instance=request.user)
-        return self._render(request, form)
-
-    def post(self, request):
-        form = ProfileEditForm(
-            request.POST, request.FILES, instance=request.user
-        )
-        if form.submit():
-            return redirect('profile')
-        return self._render(request, form)
-
-    def _render(self, request, form):
-        return render(request, 'edit.html', {'form': form})
+    def get(self, request, pk):
+        user = get_object_or_404(User, pk=pk)
+        return render(request, self.template, {'user': user})
