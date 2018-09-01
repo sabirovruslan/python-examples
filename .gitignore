@@ -14,6 +14,7 @@ logs
 __pycache__
 
 /django/db/
+/log-regression/data/train.csv
 
 # New artifacts
 *~
