@@ -22,7 +22,12 @@ class TestPB(unittest.TestCase):
     def test_write(self):
         bytes_written = pb.deviceapps_xwrite_pb(self.deviceapps, TEST_FILE)
         self.assertTrue(bytes_written > 0)
-        # check magic, type, etc.
+        with gzip.open(TEST_FILE) as gz_file:
+            for _ in range(len(self.deviceapps)):
+                magic, dev_type, length = unpack("<Ihh", gz_file.read(HEADER_SIZE))
+                self.assertEqual(magic, MAGIC)
+                self.assertEqual(dev_type, DEVICE_APPS_TYPE)
+                _ = gz_file.read(length)
 
     @unittest.skip("Optional problem")
     def test_read(self):
