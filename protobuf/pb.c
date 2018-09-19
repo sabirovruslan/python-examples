@@ -16,20 +16,18 @@ typedef struct pbheader_s {
 
 #define PBHEADER_INIT {MAGIC, 0, 0}
 
-static PyObject* bufiter_new(PyTypeObject *type, PyObject *args, PyObject *kwargs)
-{
+static PyObject* bufiter_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
     char *filename;
     PyObject *gz_file;
 
     if ( !PyArg_ParseTuple(args, "s", &filename) ) {
         return NULL;
-    } else {
-        gz_file = PyCapsule_New((void*) gzopen(filename, "r6h"), NULL, NULL);
     }
+    gz_file = gzopen(filename, "r6h");
 
     BufIterState *bistate = (BufIterState *) type->tp_alloc(type, 0);
     if ( !bistate ) {
-        gzclose((gzFile) PyCapsule_GetPointer(gz_file, NULL));
+        gzclose(gz_file);
         return NULL;
     }
 
@@ -39,7 +37,7 @@ static PyObject* bufiter_new(PyTypeObject *type, PyObject *args, PyObject *kwarg
 }
 
 static void bufiter_dealloc(BufIterState *bistate) {
-    gzclose((gzFile) PyCapsule_GetPointer(bistate->gz_file, NULL));
+    gzclose(bistate->gz_file);
 }
 
 static PyObject* parse_device(char *buf, int length) {
@@ -84,7 +82,7 @@ static PyObject* parse_device(char *buf, int length) {
 
 static PyObject* bufiter_next(BufIterState *bistate)
 {
-    gzFile gz_file = (gzFile) PyCapsule_GetPointer(bistate->gz_file, NULL);
+    gzFile gz_file = bistate->gz_file;
     pbheader_t next_header;
     int ret;
 
@@ -92,7 +90,11 @@ static PyObject* bufiter_next(BufIterState *bistate)
     if ( 0 == (ret = gzread(gz_file, &next_header, 8)) )
         return NULL;
 
-    char *buf = (char *) malloc(next_header.length);
+    char *buf = malloc(next_header.length);
+    if (! buf) {
+        PyErr_SetString(PyExc_ValueError, "Cannot allocate memory");
+        return NULL;
+    }
 
     if( gzread(gz_file, (void *) buf, next_header.length) != next_header.length ) {
         PyErr_SetString(PyExc_ValueError, "Bad string in the file");
