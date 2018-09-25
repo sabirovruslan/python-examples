@@ -1,0 +1,20 @@
+version: '3.3'
+
+services:
+
+  otus_ycrawler:
+    build: .
+    container_name: otus_ycrawler
+    restart: always
+    volumes:
+      - ".:/usr/src/app"
+    environment:
+      ENV: ${ENV}
+    networks:
+      - shared
+    ports:
+      - 8600:8600
+
+networks:
+  shared:
+    driver: bridge
