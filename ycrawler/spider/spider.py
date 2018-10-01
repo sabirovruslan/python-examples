@@ -1,5 +1,7 @@
 import asyncio
 
+from spider.log import logger
+
 try:
     import uvloop
 
@@ -10,11 +12,28 @@ except ImportError:
 
 class Spider:
 
-    def __init__(self):
-        pass
+    tasks = []
+    base_url = ''
+    concurrency = 5
+    interval = None
 
-    def run(self):
-        pass
+    @classmethod
+    def run(cls):
+        logger.info('Spider start run')
+        loop = asyncio.get_event_loop()
+
+        while True:
+            try:
+                semaphore = asyncio.Semaphore(cls.concurrency)
+
+            except KeyboardInterrupt:
+                for task in asyncio.Task.all_tasks():
+                    task.cancel()
+                loop.stop()
+                break
+            finally:
+                logger.info('Next iteration')
+        logger.info('Spider end run')
 
     async def init_parse(self):
         pass
