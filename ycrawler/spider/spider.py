@@ -1,6 +1,8 @@
+import aiohttp
 import asyncio
 
 from spider.log import logger
+from spider.request import fetch
 
 try:
     import uvloop
@@ -13,7 +15,7 @@ except ImportError:
 class Spider:
 
     tasks = []
-    base_url = ''
+    start_url = 'news.ycombinator.com/'
     concurrency = 5
     interval = None
 
@@ -25,7 +27,7 @@ class Spider:
         while True:
             try:
                 semaphore = asyncio.Semaphore(cls.concurrency)
-
+                loop.run_until_complete(cls.init_parse(semaphore))
             except KeyboardInterrupt:
                 for task in asyncio.Task.all_tasks():
                     task.cancel()
@@ -35,5 +37,11 @@ class Spider:
                 logger.info('Next iteration')
         logger.info('Spider end run')
 
-    async def init_parse(self):
+    @classmethod
+    async def init_parse(cls, semaphore):
+        async with aiohttp.ClientSession() as session:
+            html = await fetch(cls.start_url, semaphore)
+
+    @classmethod
+    def parse(cls, html):
         pass
