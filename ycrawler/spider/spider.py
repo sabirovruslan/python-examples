@@ -14,10 +14,11 @@ except ImportError:
 
 class Spider:
 
-    tasks = []
+    parsers = []
     start_url = 'news.ycombinator.com/'
     concurrency = 5
     interval = None
+    headers = {}
 
     @classmethod
     def run(cls):
@@ -40,8 +41,10 @@ class Spider:
     @classmethod
     async def init_parse(cls, semaphore):
         async with aiohttp.ClientSession() as session:
-            html = await fetch(cls.start_url, semaphore)
+            html = await fetch(cls.start_url, session, semaphore, headers=cls.headers)
+            cls.parse(html)
 
     @classmethod
     def parse(cls, html):
-        pass
+        for parser in cls.parsers:
+            parser.parse_urls(html)
