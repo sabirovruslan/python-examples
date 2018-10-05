@@ -19,6 +19,7 @@ class Spider:
     concurrency = 5
     interval = None
     headers = {}
+    error_urls = []
 
     @classmethod
     def run(cls):
