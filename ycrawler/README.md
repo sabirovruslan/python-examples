@@ -7,5 +7,5 @@
 ### Запуск тестов
 
 ```
-make test
+make parse
 ```
