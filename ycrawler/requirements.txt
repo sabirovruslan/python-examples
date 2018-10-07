@@ -3,3 +3,4 @@ Flask-Testing==0.7.1
 requests
 aiohttp
 uvloop
+beautifulsoup4

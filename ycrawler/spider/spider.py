@@ -1,7 +1,9 @@
 import aiohttp
 import asyncio
 
+from spider.item import PostItem
 from spider.log import logger
+from spider.parser import Parser
 from spider.request import fetch
 
 try:
@@ -61,3 +63,12 @@ class Spider:
             if not parser.pre_parse_urls.empty() or len(parser.parsing_urls) > 0:
                 is_running = True
         return is_running
+
+
+class YcombinatorSpider(Spider):
+    parsers = [
+        Parser(rule='item\?id=\d+', item_cls=PostItem),
+    ]
+    start_url = 'https://news.ycombinator.com/'
+    base_url = 'https://news.ycombinator.com/'
+    headers = {'User-Agent': 'Google Spider'}

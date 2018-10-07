@@ -6,4 +6,4 @@ build:
 
 .PHONY: parse
 parse: build
-	docker run -it --rm ${PROJECT_NAME} python ycrawler.py
+	docker run -it --rm -v `pwd`:/usr/src/ ${PROJECT_NAME} python ycrawler.py

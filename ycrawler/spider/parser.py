@@ -9,7 +9,6 @@ from abc import ABC
 
 from spider.log import logger
 from spider.request import fetch
-from spider.spider import Spider
 
 
 class ParserProtocol(ABC):
@@ -22,7 +21,7 @@ class ParserProtocol(ABC):
         self.done_urls = []
         self.item_cls = item_cls
 
-    async def task(self, spider: Spider, semaphore):
+    async def task(self, spider, semaphore):
         async with aiohttp.ClientSession() as session:
             while spider.is_running():
                 try:
@@ -45,11 +44,10 @@ class ParserProtocol(ABC):
         self.done_urls.append(url)
 
         if not self.item_cls:
-            spider.parse(html)
             logger.info('Followed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
             return None
         item = self.item_cls(html)
-        await item.save()
+        await item.save(semaphore)
         logger.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
 
     def parse_urls(self, html, base_url):
@@ -69,3 +67,10 @@ class ParserProtocol(ABC):
             return None
         self.filter_urls.add(url)
         self.pre_parse_urls.put_nowait(url)
+
+
+class Parser(ParserProtocol):
+
+    def abstract_urls(self, html):
+        urls = re.findall(self.rule, html)
+        return urls
