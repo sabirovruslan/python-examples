@@ -8,7 +8,7 @@ import aiohttp
 from abc import ABC
 
 from spider.log import logger
-from spider.request import fetch
+from spider.request import fetch_lock
 
 
 class ParserProtocol(ABC):
@@ -32,7 +32,7 @@ class ParserProtocol(ABC):
                     pass
 
     async def execute_url(self, url, spider, session, semaphore):
-        html = await fetch(url, session, semaphore, headers=spider.headers)
+        html = await fetch_lock(url, session, semaphore, headers=spider.headers)
         if not html:
             spider.error_urls.append(url)
             self.pre_parse_urls.put_nowait(url)
@@ -43,12 +43,12 @@ class ParserProtocol(ABC):
         self.parsing_urls.remove(url)
         self.done_urls.append(url)
 
-        if not self.item_cls:
+        if self.item_cls:
+            item = self.item_cls(html)
+            await item.save()
+            logger.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
+        else:
             logger.info('Followed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
-            return None
-        item = self.item_cls(html)
-        await item.save(semaphore)
-        logger.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
 
     def parse_urls(self, html, base_url):
         if not html:

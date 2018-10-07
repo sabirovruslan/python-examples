@@ -1,10 +1,12 @@
+from abc import ABC
+
 import aiohttp
 import asyncio
 
 from spider.item import PostItem
 from spider.log import logger
 from spider.parser import Parser
-from spider.request import fetch
+from spider.request import fetch_lock
 
 try:
     import uvloop
@@ -14,10 +16,10 @@ except ImportError:
     pass
 
 
-class Spider:
+class SpiderProtocol(ABC):
     parsers = []
-    start_url = 'https://news.ycombinator.com/'
-    base_url = 'https://news.ycombinator.com/'
+    start_url = ''
+    base_url = ''
     concurrency = 3
     interval = None
     headers = {}
@@ -47,7 +49,7 @@ class Spider:
     @classmethod
     async def init_parse(cls, semaphore, loop):
         async with aiohttp.ClientSession() as session:
-            html = await fetch(cls.start_url, session, semaphore, headers=cls.headers)
+            html = await fetch_lock(cls.start_url, session, semaphore, headers=cls.headers)
             cls.parse(html)
             await asyncio.sleep(cls.sleep_time, loop=loop)
 
@@ -60,12 +62,12 @@ class Spider:
     def is_running(cls):
         is_running = False
         for parser in cls.parsers:
-            if not parser.pre_parse_urls.empty() or len(parser.parsing_urls) > 0:
+            if len(parser.filter_urls) != len(parser.done_urls):
                 is_running = True
         return is_running
 
 
-class YcombinatorSpider(Spider):
+class YcombinatorSpider(SpiderProtocol):
     parsers = [
         Parser(rule='item\?id=\d+', item_cls=PostItem),
     ]
