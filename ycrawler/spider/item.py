@@ -49,7 +49,7 @@ class PostItem(ItemProtocol):
             if not html:
                 return None
             if isinstance(html, bytes):
-                html = html.decode('utf-8')
+                html = html.decode()
             self._write_to_file(html, self._create_file_name(prefix))
         except Exception as e:
             logger.error(f'Save page: {self.post_url}; error: {e}')
