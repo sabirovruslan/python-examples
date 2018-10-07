@@ -7,3 +7,7 @@ build:
 .PHONY: test
 test: build
 	docker run -it --rm ${PROJECT_NAME} python setup.py test
+
+.PHONY: parse
+parse: build
+	docker run -it --rm ${PROJECT_NAME} python ycrawler.py

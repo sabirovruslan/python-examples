@@ -7,22 +7,24 @@ from urllib.parse import urljoin
 import aiohttp
 from abc import ABC
 
+from spider.log import logger
 from spider.request import fetch
 from spider.spider import Spider
 
 
 class ParserProtocol(ABC):
 
-    def __init__(self, rule=None):
+    def __init__(self, rule=None, item_cls=None):
         self.rule = rule
         self.parsing_urls = []
         self.pre_parse_urls = Queue()
         self.filter_urls = set()
         self.done_urls = []
+        self.item_cls = item_cls
 
     async def task(self, spider: Spider, semaphore):
         async with aiohttp.ClientSession() as session:
-            while True:
+            while spider.is_running():
                 try:
                     url = await asyncio.wait_for(self.pre_parse_urls.get(), 5)
                     self.parsing_urls.append(url)
@@ -35,18 +37,24 @@ class ParserProtocol(ABC):
         if not html:
             spider.error_urls.append(url)
             self.pre_parse_urls.put_nowait(url)
-            return
+            return None
         if url in spider.error_urls:
             spider.error_urls.remove(url)
 
         self.parsing_urls.remove(url)
         self.done_urls.append(url)
 
-        # Todo parse
+        if not self.item_cls:
+            spider.parse(html)
+            logger.info('Followed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
+            return None
+        item = self.item_cls(html)
+        await item.save()
+        logger.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
 
-    def parse_url(self, html, base_url):
+    def parse_urls(self, html, base_url):
         if not html:
-            return
+            return None
         for url in self.abstract_urls(html):
             url = unescape(url)
             if not re.match('(http|https)://', url):
@@ -58,6 +66,6 @@ class ParserProtocol(ABC):
 
     def add(self, url: str):
         if url in self.filter_urls:
-            return
+            return None
         self.filter_urls.add(url)
         self.pre_parse_urls.put_nowait(url)
