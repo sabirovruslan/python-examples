@@ -48,15 +48,15 @@ class PostItem(ItemProtocol):
             html = await fetch(url, session)
             if not html:
                 return None
-            if isinstance(html, bytes):
-                html = html.decode()
             self._write_to_file(html, self._create_file_name(prefix))
         except Exception as e:
             logger.error(f'Save page: {self.post_url}; error: {e}')
 
     def _write_to_file(self, html, filename):
         try:
-            with open(filename, "w") as f:
+            if not isinstance(html, bytes):
+                html = html.encode('utf-8')
+            with open(filename, "wb") as f:
                 f.write(html)
         except Exception as e:
             logger.error(f'error: {e}; file: {filename};')
