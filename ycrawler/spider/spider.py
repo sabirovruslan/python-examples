@@ -26,16 +26,15 @@ class SpiderProtocol(ABC):
     error_urls = []
     sleep_time = 5.0
 
-    @classmethod
-    def run(cls):
+    def run(self):
         logger.info('Spider start run')
         loop = asyncio.get_event_loop()
-        semaphore = asyncio.Semaphore(cls.concurrency)
-        tasks = asyncio.wait([parser.task(cls, semaphore) for parser in cls.parsers])
+        semaphore = asyncio.Semaphore(self.concurrency)
+        tasks = asyncio.wait([parser.task(self, semaphore) for parser in self.parsers])
 
         while True:
             try:
-                loop.run_until_complete(cls.init_parse(semaphore, loop))
+                loop.run_until_complete(self.init_parse(semaphore, loop))
                 loop.run_until_complete(tasks)
             except KeyboardInterrupt:
                 for task in asyncio.Task.all_tasks():
@@ -46,22 +45,19 @@ class SpiderProtocol(ABC):
                 logger.info('Next iteration')
         logger.info('Spider end run')
 
-    @classmethod
-    async def init_parse(cls, semaphore, loop):
+    async def init_parse(self, semaphore, loop):
         async with aiohttp.ClientSession() as session:
-            html = await fetch_lock(cls.start_url, session, semaphore, headers=cls.headers)
-            cls.parse(html)
-            await asyncio.sleep(cls.sleep_time, loop=loop)
+            html = await fetch_lock(self.start_url, session, semaphore, headers=self.headers)
+            self.parse(html)
+            await asyncio.sleep(self.sleep_time, loop=loop)
 
-    @classmethod
-    def parse(cls, html):
-        for parser in cls.parsers:
-            parser.parse_urls(html, cls.base_url)
+    def parse(self, html):
+        for parser in self.parsers:
+            parser.parse_urls(html, self.base_url)
 
-    @classmethod
-    def is_running(cls):
+    def is_running(self):
         is_running = False
-        for parser in cls.parsers:
+        for parser in self.parsers:
             if len(parser.filter_urls) != len(parser.done_urls):
                 is_running = True
         return is_running

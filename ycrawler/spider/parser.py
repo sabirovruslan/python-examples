@@ -45,7 +45,7 @@ class ParserProtocol(ABC):
 
         if self.item_cls:
             item = self.item_cls(html)
-            await item.save()
+            await asyncio.ensure_future(item.save())
             logger.info('Parsed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))
         else:
             logger.info('Followed({}/{}): {}'.format(len(self.done_urls), len(self.filter_urls), url))

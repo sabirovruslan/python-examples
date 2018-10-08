@@ -1,3 +1,4 @@
+import asyncio
 import os
 from html import unescape
 
@@ -48,11 +49,12 @@ class PostItem(ItemProtocol):
             html = await fetch(url, session)
             if not html:
                 return None
-            self._write_to_file(html, self._create_file_name(prefix))
+
+            await self._write_to_file(html, self._create_file_name(prefix))
         except Exception as e:
             logger.error(f'Save page: {self.post_url}; error: {e}')
 
-    def _write_to_file(self, html, filename):
+    async def _write_to_file(self, html, filename):
         try:
             if not isinstance(html, bytes):
                 html = html.encode('utf-8')
