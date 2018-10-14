@@ -1,7 +1,20 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
+
+func count() {
+	for i := 0; i < 5; i++ {
+		fmt.Println(i)
+		time.Sleep(time.Millisecond + 1)
+	}
+}
 
 func main() {
- fmt.Println("Ура работает!")
+	go count()
+	time.Sleep(time.Millisecond + 2)
+	fmt.Println("Ура работает!")
+	time.Sleep(time.Millisecond + 5)
 }
