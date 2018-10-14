@@ -5,16 +5,21 @@ import (
 	"time"
 )
 
-func count() {
-	for i := 0; i < 5; i++ {
-		fmt.Println(i)
-		time.Sleep(time.Millisecond + 1)
+func printCount(c chan int) {
+	v := 0
+	for v >=0 {
+		v = <-c
+		fmt.Println(v, "")
 	}
 }
 
 func main() {
-	go count()
-	time.Sleep(time.Millisecond + 2)
+	ch := make(chan int)
+	go printCount(ch)
+	a :=[]int{9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1}
+	for _, i := range a {
+		ch<-i
+	}
+	time.Sleep(time.Millisecond + 1)
 	fmt.Println("Ура работает!")
-	time.Sleep(time.Millisecond + 5)
 }
