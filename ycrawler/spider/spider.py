@@ -1,9 +1,7 @@
-import multiprocessing
+import asyncio
 from abc import ABC
-from concurrent.futures import ThreadPoolExecutor
 
 import aiohttp
-import asyncio
 
 from spider.log import logger
 from spider.parser import Parser
