@@ -1,4 +1,3 @@
-import asyncio
 import os
 from html import unescape
 
@@ -9,21 +8,13 @@ from spider.log import logger
 from spider.request import fetch
 
 
-class ItemProtocol:
+class PostItem:
+    STORE_DIR = os.environ.get('STORE_DIR')
 
-    def __init__(self, html):
-        raise NotImplementedError
-
-    async def save(self):
-        raise NotImplementedError
-
-
-class PostItem(ItemProtocol):
-    STORE_DIR = '/usr/src/store'
-
-    def __init__(self, html):
+    def __init__(self, html, loop):
         soup = BeautifulSoup(html, features='html.parser')
         self.post_id = soup.select_one('table.fatitem tr.athing').attrs['id']
+        self._loop = loop
 
         post_url = unescape(soup.select_one('a.storylink').attrs['href'])
         self.post_url = post_url
@@ -50,11 +41,11 @@ class PostItem(ItemProtocol):
             if not html:
                 return None
 
-            await self._write_to_file(html, self._create_file_name(prefix))
+            self._loop.run_in_executor(None, self._write_to_file, html, self._create_file_name(prefix))
         except Exception as e:
             logger.error(f'Save page: {self.post_url}; error: {e}')
 
-    async def _write_to_file(self, html, filename):
+    def _write_to_file(self, html, filename):
         try:
             if not isinstance(html, bytes):
                 html = html.encode('utf-8')
