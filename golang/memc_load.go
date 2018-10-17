@@ -2,24 +2,24 @@ package main
 
 import (
 	"fmt"
-	"time"
+	"github.com/jessevdk/go-flags"
+	"log"
 )
 
-func printCount(c chan int) {
-	v := 0
-	for v >=0 {
-		v = <-c
-		fmt.Println("Чтение из канала: ", v)
-	}
+var options struct {
+	dry     bool   `long:dry default:false`
+	test    bool   `long:test default:false`
+	pattern string `long:pattern default:"/data/appsinstalled/*.tsv.gz"`
+	logfile string `long:log default:""`
+	idfa    string `long:idfa default:"127.0.0.1:33013"`
+	gaid    string `long:gaid default:"127.0.0.1:33014"`
+	adid    string `long:adid default:"127.0.0.1:33015"`
+	dvid    string `long:dvid default:"127.0.0.1:33016"`
 }
 
 func main() {
-	ch := make(chan int)
-	go printCount(ch)
-	a :=[]int{9, 8, 7, 6, 5, 4, 3, 2, 1, 0, -1, -2}
-	for _, i := range a {
-		ch<-i
-	}
-	time.Sleep(time.Millisecond + 1)
-	fmt.Println("Ура работает!")
+	flags.Parse(&options)
+	log.Println("Memc loader started with options:")
+	fmt.Println("Test flag dry: ", options.dry)
+	fmt.Println("Test flag pattern: ", options.pattern)
 }
