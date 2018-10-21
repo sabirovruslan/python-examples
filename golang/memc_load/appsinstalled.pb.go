@@ -13,10 +13,10 @@ var _ = math.Inf
 const _ = proto.ProtoPackageIsVersion2
 
 type UserApps struct {
-	Apps             []uint32 `protobuf:"varint,1,rep,name=apps" json:"apps,omitempty"`
-	Lat              *float64 `protobuf:"fixed64,2,opt,name=lat" json:"lat,omitempty"`
-	Lon              *float64 `protobuf:"fixed64,3,opt,name=lon" json:"lon,omitempty"`
-	XXX_unrecognized []byte   `json:"-"`
+	Apps            []uint32 `protobuf:"varint,1,rep,name=apps" json:"apps,omitempty"`
+	Lat             *float64 `protobuf:"fixed64,2,opt,name=lat" json:"lat,omitempty"`
+	Lon             *float64 `protobuf:"fixed64,3,opt,name=lon" json:"lon,omitempty"`
+	XxxUnrecognized []byte   `json:"-"`
 }
 
 func (m *UserApps) Reset() {
