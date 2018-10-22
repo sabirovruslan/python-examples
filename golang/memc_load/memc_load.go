@@ -11,7 +11,6 @@ import (
 	"log"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strconv"
 	"strings"
 )
@@ -26,41 +25,22 @@ type AppsInstalled struct {
 	apps    []uint32
 }
 
-type Options struct {
-	dry     bool
-	pattern string
-	idfa    string
-	gaid    string
-	adid    string
-	dvid    string
+type Config struct {
+	logfile    string
+	nworkers   int
+	bufsize    int
+	pattern    string
+	deviceMemc map[string]string
 }
 
-func insertAppsInstalled(memcPool map[string]*memcache.Client, memcAddr string, appsInstalled *AppsInstalled, dryRun bool) bool {
-	ua := &UserApps{
-		Lat:  proto.Float64(appsInstalled.lat),
-		Lon:  proto.Float64(appsInstalled.lon),
-		Apps: appsInstalled.apps,
-	}
-	key := fmt.Sprintf("%s:%s", appsInstalled.devType, appsInstalled.devId)
-	packed, _ := proto.Marshal(ua)
-	if dryRun {
-		log.Printf("%s - %s -> %s", memcAddr, key, ua.String())
-	} else {
-		mc, ok := memcPool[memcAddr]
-		if !ok {
-			mc = memcache.New(memcAddr)
-			memcPool[memcAddr] = mc
-		}
-		err := mc.Set(&memcache.Item{
-			Key:   key,
-			Value: packed,
-		})
-		if err != nil {
-			log.Printf("Cannot write to memc %s: %v", memcAddr, err)
-			return false
-		}
-	}
-	return true
+type MemcacheItem struct {
+	key  string
+	data []byte
+}
+
+type Stat struct {
+	errors    int
+	processed int
 }
 
 func parseAppsInstalled(line string) (*AppsInstalled, error) {
@@ -101,57 +81,144 @@ func parseAppsInstalled(line string) (*AppsInstalled, error) {
 	}, nil
 }
 
-func processFile(fname string, options Options) {
-	log.Println("Processing:", fname)
-	f, err := os.Open(fname)
+func SerializeAppsInstalled(appsInstalled *AppsInstalled) (*MemcacheItem, error) {
+	ua := &UserApps{
+		Lat:  proto.Float64(appsInstalled.lat),
+		Lon:  proto.Float64(appsInstalled.lon),
+		Apps: appsInstalled.apps,
+	}
+	key := fmt.Sprintf("%s:%s", appsInstalled.devType, appsInstalled.devId)
+	packed, err := proto.Marshal(ua)
 	if err != nil {
 		log.Println(err)
+		return nil, err
 	}
-	defer f.Close()
+	return &MemcacheItem{key, packed}, nil
+}
 
-	gz, err := gzip.NewReader(f)
-	if err != nil {
-		log.Println(err)
-	}
-	defer gz.Close()
-
-	deviceMemc := map[string]string{
-		"idfa": options.idfa,
-		"gaid": options.gaid,
-		"adid": options.adid,
-		"dvid": options.dvid,
-	}
-
+func MemcacheWorker(mc *memcache.Client, items chan *MemcacheItem, resultsQueue chan Stat) {
 	processed, errorsCount := 0, 0
-	memcPool := map[string]*memcache.Client{}
-	scanner := bufio.NewScanner(gz)
-	for scanner.Scan() {
-		line := scanner.Text()
-		line = strings.Trim(line, " ")
-
-		if line == "" {
-			continue
+	for item := range items {
+		err := mc.Set(&memcache.Item{
+			Key:   item.key,
+			Value: item.data,
+		})
+		if err != nil {
+			errorsCount += 1
+		} else {
+			processed += 1
 		}
+	}
+	resultsQueue <- Stat{errorsCount, processed}
+}
 
+func LineParser(lines chan string, memcQueues map[string]chan *MemcacheItem, resultsQueue chan Stat) {
+	errorsCount := 0
+	for line := range lines {
 		appsInstalled, err := parseAppsInstalled(line)
 		if err != nil {
 			errorsCount += 1
 			continue
 		}
-
-		memcAddr, ok := deviceMemc[appsInstalled.devType]
-		if !ok {
+		item, err := SerializeAppsInstalled(appsInstalled)
+		if err != nil {
 			errorsCount += 1
-			log.Println("Unknow device type:", appsInstalled.devType)
 			continue
 		}
-
-		ok = insertAppsInstalled(memcPool, memcAddr, appsInstalled, options.dry)
-		if ok {
-			processed += 1
-		} else {
+		queue, ok := memcQueues[appsInstalled.devType]
+		if !ok {
+			log.Println("Unknow device type:", appsInstalled.devType)
 			errorsCount += 1
+			continue
 		}
+		queue <- item
+	}
+	resultsQueue <- Stat{errors: errorsCount}
+}
+
+func dotRename(path string) error {
+	head := filepath.Dir(path)
+	fn := filepath.Base(path)
+	if err := os.Rename(path, filepath.Join(head, "."+fn)); err != nil {
+		log.Printf("Can't rename a file: %s", path)
+		return err
+	}
+	return nil
+}
+
+func fileReader(filename string, linesQueue chan string) error {
+	log.Println("Processing:", filename)
+	f, err := os.Open(filename)
+	if err != nil {
+		log.Printf("Can't open file: %s", filename)
+		return err
+	}
+	defer f.Close()
+
+	gz, err := gzip.NewReader(f)
+	if err != nil {
+		log.Printf("Can't create a new Reader %v", err)
+		return err
+	}
+	defer gz.Close()
+
+	scanner := bufio.NewScanner(gz)
+	for scanner.Scan() {
+		line := scanner.Text()
+		line = strings.Trim(line, " ")
+		if line == "" {
+			continue
+		}
+		linesQueue <- line
+	}
+
+	if err := scanner.Err(); err != nil {
+		log.Printf("Scanner error: %v", err)
+		return err
+	}
+
+	return nil
+}
+
+func processFiles(config *Config) error {
+	files, err := filepath.Glob(config.pattern)
+	if err != nil {
+		log.Printf("Could not find files for the given pattern: %s", config.pattern)
+		return err
+	}
+
+	resultsQueue := make(chan Stat)
+
+	memcQueues := make(map[string]chan *MemcacheItem)
+	for devType, memcAddr := range config.deviceMemc {
+		memcQueues[devType] = make(chan *MemcacheItem, config.bufsize)
+		mc := memcache.New(memcAddr)
+		go MemcacheWorker(mc, memcQueues[devType], resultsQueue)
+	}
+
+	linesQueue := make(chan string, config.bufsize)
+	for i := 0; i < config.nworkers; i++ {
+		go LineParser(linesQueue, memcQueues, resultsQueue)
+	}
+
+	for _, filename := range files {
+		fileReader(filename, linesQueue)
+		dotRename(filename)
+	}
+	close(linesQueue)
+
+	processed, errorsCount := 0, 0
+	for i := 0; i < config.nworkers; i++ {
+		results := <-resultsQueue
+		processed += results.processed
+		errorsCount += results.errors
+	}
+
+	for _, queue := range memcQueues {
+		close(queue)
+		results := <-resultsQueue
+		processed += results.processed
+		errorsCount += results.errors
 	}
 
 	errRate := float32(errorsCount) / float32(processed)
@@ -160,87 +227,58 @@ func processFile(fname string, options Options) {
 	} else {
 		log.Printf("High error rate (%g > %g). Failed load\n", errRate, NormalErrRate)
 	}
+
+	return nil
 }
 
-func prototest() {
-	sample := "idfa\t1rfw452y52g2gq4g\t55.55\t42.42\t1423,43,567,3,7,23\ngaid\t7rfw452y52g2gq4g\t55.55\t42.42\t7423,424"
-	for _, line := range strings.Split(sample, "\n") {
-		appsInstalled, _ := parseAppsInstalled(line)
-		ua := &UserApps{
-			Lat:  proto.Float64(appsInstalled.lat),
-			Lon:  proto.Float64(appsInstalled.lon),
-			Apps: appsInstalled.apps,
-		}
-		packed, err := proto.Marshal(ua)
-		if err != nil {
-			log.Println(err)
-		}
+var (
+	logfile  string
+	pattern  string
+	nworkers int
+	bufsize  int
+	idfa     string
+	gaid     string
+	adid     string
+	dvid     string
+)
 
-		unpacked := &UserApps{}
-		err = proto.Unmarshal(packed, unpacked)
-		if err != nil {
-			log.Println(err)
-		}
-
-		if ua.GetLat() != unpacked.GetLat() || !reflect.DeepEqual(ua.GetApps(), unpacked.GetApps()) {
-			os.Exit(1)
-		}
-	}
+func init() {
+	flag.StringVar(&pattern, "pattern", "/data/appsinstalled/*.tsv.gz", "")
+	flag.StringVar(&logfile, "log", "", "")
+	flag.IntVar(&nworkers, "workers", 5, "")
+	flag.IntVar(&bufsize, "bufsize", 10, "")
+	flag.StringVar(&idfa, "idfa", "127.0.0.1:33013", "")
+	flag.StringVar(&gaid, "gaid", "127.0.0.1:33014", "")
+	flag.StringVar(&adid, "adid", "127.0.0.1:33015", "")
+	flag.StringVar(&dvid, "dvid", "127.0.0.1:33016", "")
 }
 
-func dotRename(path string) {
-	head := filepath.Dir(path)
-	fn := filepath.Base(path)
-	if err := os.Rename(path, filepath.Join(head, "."+fn)); err != nil {
-		log.Fatalf("Can't rename a file: %s", path)
-	}
-}
-
-func processFiles(options Options) {
-	files, err := filepath.Glob(options.pattern)
-	if err != nil {
-		log.Fatalf("Could not find files for the given pattern: %s", options.pattern)
-	}
-	for _, fname := range files {
-		processFile(fname, options)
-		dotRename(fname)
+func newConfig() *Config {
+	return &Config{
+		logfile:  logfile,
+		pattern:  pattern,
+		nworkers: nworkers,
+		bufsize:  bufsize,
+		deviceMemc: map[string]string{
+			"idfa": idfa,
+			"gaid": gaid,
+			"adid": adid,
+			"dvid": dvid,
+		},
 	}
 }
 
 func main() {
-	dry := flag.Bool("dry", false, "")
-	test := flag.Bool("test", false, "")
-	pattern := flag.String("pattern", "/data/appsinstalled/*.tsv.gz", "")
-	logfile := flag.String("log", "", "")
-	idfa := flag.String("idfa", "127.0.0.1:33013", "")
-	gaid := flag.String("gaid", "127.0.0.1:33014", "")
-	adid := flag.String("adid", "127.0.0.1:33015", "")
-	dvid := flag.String("dvid", "127.0.0.1:33016", "")
 	flag.Parse()
-
-	options := Options{
-		dry:     *dry,
-		pattern: *pattern,
-		idfa:    *idfa,
-		gaid:    *gaid,
-		adid:    *adid,
-		dvid:    *dvid,
-	}
-
-	if *logfile != "" {
-		f, err := os.OpenFile(*logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+	config := newConfig()
+	if config.logfile != "" {
+		f, err := os.OpenFile(config.logfile, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 		if err != nil {
-			log.Fatalf("Cannot open log file: %s", logfile)
+			log.Fatalf("Cannot open log file: %s", config.logfile)
 		}
 		defer f.Close()
 		log.SetOutput(f)
 	}
-
-	if *test {
-		prototest()
-		os.Exit(0)
-	}
-
-	log.Println("Memc loader started with options:", options)
-	processFiles(options)
+	log.Println("Memc loader started with config:", config)
+	processFiles(config)
 }
